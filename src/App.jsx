@@ -99,37 +99,6 @@ window.fetch = async (url, options) => {
     return originalFetch(url, options);
 };
 
-            
-            const geminiResponse = {
-                candidates: [{
-                    content: {
-                        parts: [{
-                            inlineData: {
-                                mimeType: "image/png",
-                                data: b64Data
-                            }
-                        }]
-                    }
-                }]
-            };
-            
-            return new Response(JSON.stringify(geminiResponse), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-        } catch (e) {
-            console.error("Image Generation Interceptor Error:", e);
-            return new Response(JSON.stringify({
-                error: { message: "Image generation failed: " + e.message }
-            }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-    }
-    return originalFetch(url, options);
-};
 
 const INITIAL_SCENES = [];
 
@@ -886,7 +855,8 @@ export default function App() {
     const [directorSearchResults, setDirectorSearchResults] = useState([]);
     const [isSearchingDirector, setIsSearchingDirector] = useState(false);
     const [scriptLanguage, setScriptLanguage] = useState('Auto-Detect Native Language');
-    const apiKey = 'AIzaSyBwWqYggIMOEk4ftwYa3D1mvZpyxdBRCk0'; // User-provided text API key
+    const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('user_api_key') || '');
+    const apiKey = customApiKey || 'AIzaSyBwWqYggIMOEk4ftwYa3D1mvZpyxdBRCk0'; // Default fallback, but customizable
 
     const GEMINI_TEXT_MODEL = 'gemini-2.5-flash';
     const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image-preview';
@@ -5062,6 +5032,22 @@ CRITICAL RULES:
                                         onChange={(e) => setProjectName(e.target.value)}
                                         className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 text-zinc-200 transition-all"
                                         placeholder="Untitled Project"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2 flex items-center justify-between">
+                                        <span>Gemini API Key</span>
+                                        <span className="text-[9px] text-zinc-500 font-medium normal-case">(from Google AI Studio)</span>
+                                    </label>
+                                    <input 
+                                        type="password" 
+                                        value={customApiKey} 
+                                        onChange={(e) => {
+                                            setCustomApiKey(e.target.value);
+                                            localStorage.setItem('user_api_key', e.target.value);
+                                        }}
+                                        className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 text-zinc-200 transition-all font-mono"
+                                        placeholder="AIzaSy... (Paste custom API Key here)"
                                     />
                                 </div>
                                 <div>
