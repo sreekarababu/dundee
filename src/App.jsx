@@ -49,40 +49,76 @@ window.fetch = async (url, options) => {
             
             console.log("Calling imagerouter.io with size:", size, "model:", routerModel);
             
-            const imagerouterResp = await originalFetch(imagerouterUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${routerKey}`
-                },
-                body: JSON.stringify({
-                    prompt: promptText,
-                    model: routerModel,
-                    size: size,
-                    response_format: "b64_json"
-                })
-            });
+            let useFallback = false;
+            let b64Data = '';
             
-            if (!imagerouterResp.ok) {
-                const errText = await imagerouterResp.text();
-                console.error("imagerouter.io failed:", errText);
-                throw new Error("ImageRouter Error: " + errText);
+            try {
+                const imagerouterResp = await originalFetch(imagerouterUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${routerKey}`
+                    },
+                    body: JSON.stringify({
+                        prompt: promptText,
+                        model: routerModel,
+                        size: size,
+                        response_format: "b64_json"
+                    })
+                });
+                
+                if (imagerouterResp.ok) {
+                    const routerResult = await imagerouterResp.json();
+                    if (routerResult.error) {
+                        console.warn("ImageRouter returned error inside JSON:", routerResult.error);
+                        useFallback = true;
+                    } else {
+                        b64Data = routerResult.data?.[0]?.b64_json || await (async () => {
+                            const imgUrl = routerResult.data?.[0]?.url;
+                            if (!imgUrl) throw new Error("No image data");
+                            const imgResp = await originalFetch(imgUrl);
+                            const buffer = await imgResp.arrayBuffer();
+                            let binary = '';
+                            const bytes = new Uint8Array(buffer);
+                            for (let i = 0; i < bytes.byteLength; i++) {
+                                binary += String.fromCharCode(bytes[i]);
+                            }
+                            return window.btoa(binary);
+                        })();
+                    }
+                } else {
+                    const errText = await imagerouterResp.text();
+                    console.warn("ImageRouter response status not OK:", imagerouterResp.status, errText);
+                    useFallback = true;
+                }
+            } catch (routerErr) {
+                console.warn("ImageRouter request threw error:", routerErr);
+                useFallback = true;
             }
             
-            const routerResult = await imagerouterResp.json();
-            const b64Data = routerResult.data?.[0]?.b64_json || await (async () => {
-                const imgUrl = routerResult.data?.[0]?.url;
-                if (!imgUrl) throw new Error("No image data returned from ImageRouter");
-                const imgResp = await originalFetch(imgUrl);
-                const buffer = await imgResp.arrayBuffer();
+            if (useFallback || !b64Data) {
+                console.log("FALLING BACK TO POLLINATIONS.AI (FREE MULTIPLEXER)");
+                let w = 1024, h = 1024;
+                if (apiAspectRatio === "16:9") { w = 1024; h = 576; }
+                else if (apiAspectRatio === "9:16") { w = 576; h = 1024; }
+                else if (apiAspectRatio === "4:3") { w = 1024; h = 768; }
+                else if (apiAspectRatio === "3:4") { w = 768; h = 1024; }
+                
+                const pollPrompt = encodeURIComponent(promptText);
+                const pollUrl = `https://image.pollinations.ai/prompt/${pollPrompt}?width=${w}&height=${h}&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
+                
+                const pollResp = await originalFetch(pollUrl);
+                if (!pollResp.ok) {
+                    throw new Error("Both ImageRouter and Pollinations.ai fallback failed.");
+                }
+                const buffer = await pollResp.arrayBuffer();
                 let binary = '';
                 const bytes = new Uint8Array(buffer);
-                const len = bytes.byteLength;
-                for (let i = 0; i < len; i++) {
+                for (let i = 0; i < bytes.byteLength; i++) {
                     binary += String.fromCharCode(bytes[i]);
                 }
-                return window.btoa(binary);
-            })();
+                b64Data = window.btoa(binary);
+            }
             
             const geminiResponse = {
                 candidates: [{
@@ -103,9 +139,9 @@ window.fetch = async (url, options) => {
             });
             
         } catch (e) {
-            console.error("ImageRouter Interceptor Error:", e);
+            console.error("Image Generation Interceptor Error:", e);
             return new Response(JSON.stringify({
-                error: { message: "ImageRouter proxy failed: " + e.message }
+                error: { message: "Image generation failed: " + e.message }
             }), {
                 status: 500,
                 headers: { 'Content-Type': 'application/json' }
