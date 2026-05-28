@@ -4,56 +4,9 @@ import {
     UserPlus, Upload, X, Users, Plus, Save, Undo2, Trash2, FolderOpen, Cloud, 
     Images, MapPin, File, LayoutTemplate, Aperture, Video, Info, Activity, LayoutDashboard,
     Play, ChevronLeft, ChevronRight, Volume2, Square, Sparkles, SlidersHorizontal, FileText,
-    Clapperboard, Mic, Boxes, FileSearch, MessageSquareQuote, ListChecks, ChevronDown, ChevronUp,
-    User, Box, Crosshair, Navigation, Lightbulb, Star, Maximize, Paintbrush, Eraser
+    Clapperboard, Boxes, MessageSquareQuote, ListChecks, ChevronDown, ChevronUp,
+    User, Box, Crosshair, Navigation, Lightbulb, Star, Maximize, Paintbrush, Eraser, Search, ScanFace
 } from 'lucide-react';
-
-const base64ToArrayBuffer = (base64) => {
-    const binaryString = window.atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-};
-
-const pcmToWav = (pcmData, sampleRate) => {
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-    const blockAlign = numChannels * (bitsPerSample / 8);
-    const dataSize = pcmData.length * (bitsPerSample / 8);
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(buffer);
-
-    const writeString = (view, offset, string) => {
-        for (let i = 0; i < string.length; i++) {
-            view.setUint8(offset + i, string.charCodeAt(i));
-        }
-    };
-
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + dataSize, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitsPerSample, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, dataSize, true);
-
-    let offset = 44;
-    for (let i = 0; i < pcmData.length; i++, offset += 2) {
-        view.setInt16(offset, pcmData[i], true);
-    }
-
-    return new Blob([buffer], { type: 'audio/wav' });
-};
 
 const INITIAL_SCENES = [];
 
@@ -72,7 +25,6 @@ const extractFramesFromVideo = (file, numFrames = 4) => {
 
         video.onseeked = () => {
             const canvas = document.createElement('canvas');
-            // Scale down slightly for performance if needed, but keep aspect ratio
             const scale = Math.min(1, 1280 / Math.max(video.videoWidth, video.videoHeight));
             canvas.width = video.videoWidth * scale;
             canvas.height = video.videoHeight * scale;
@@ -106,21 +58,21 @@ const fileToBase64 = (file) => new Promise((resolve, reject) => {
     reader.readAsDataURL(file);
 });
 
-let FRAMING_SHOTS = ["Extreme Wide Shot (EWS)", "Wide Shot (WS)", "Full Shot", "Medium Wide Shot", "Cowboy Shot", "Medium Shot (MS)", "Medium Close-Up (MCU)", "Close-Up (CU)", "Extreme Close-Up (ECU)", "Two Shot", "Three Shot", "Group Shot", "Insert Shot", "Cutaway Shot", "Over-The-Shoulder Shot (OTS)", "Point of View Shot (POV)"];
-let CAMERA_ANGLES = ["Eye-Level Shot", "Low Angle Shot", "High Angle Shot", "Bird’s Eye View", "Top Shot", "Dutch Angle", "Canted Angle", "Worm’s Eye View", "Shoulder Level Shot", "Hip Level Shot", "Knee Level Shot", "Ground Level Shot"];
-let CAMERA_MOVEMENTS = ["Static / None", "Pan Shot", "Tilt Shot", "Dolly Shot", "Tracking Shot", "Truck Shot", "Push-In Shot", "Pull-Out Shot", "Zoom In", "Zoom Out", "Crash Zoom", "Arc Shot", "Crane Shot", "Jib Shot", "Steadicam Shot", "Handheld Shot", "Drone Shot", "Whip Pan", "Roll Shot", "Orbit Shot", "Slider Shot"];
-let SPECIALTY_SHOTS = ["None", "Hero Entry Shot", "Silhouette Shot", "Reflection Shot", "Mirror Shot", "Rack Focus Shot", "Split Diopter Shot", "Lens Flare Shot", "Slow Motion Shot", "Time-Lapse Shot", "Hyperlapse Shot", "Freeze Frame", "Bullet Time Shot", "Long Take", "One Shot", "Continuous Shot", "360 Degree Shot", "Hidden Cut Shot", "Macro Shot", "Deep Focus Shot", "Shallow Focus Shot"];
-let LIGHTING_STYLES = ["Cinematic Lighting", "Natural Daylight", "Soft Studio", "Silhouette", "Cyberpunk", "High Key", "Low Key", "Neon", "Golden Hour Lighting", "Harsh Sunlight", "Mood Lighting"];
-let TIME_OF_DAY = ["Day", "Night", "Golden Hour", "Morning", "Evening", "Twilight", "Midnight", "Dawn", "Dusk", "Unspecified"];
+const FRAMING_SHOTS = ["Extreme Wide Shot (EWS)", "Wide Shot (WS)", "Full Shot", "Medium Wide Shot", "Cowboy Shot", "Medium Shot (MS)", "Medium Close-Up (MCU)", "Close-Up (CU)", "Extreme Close-Up (ECU)", "Two Shot", "Three Shot", "Group Shot", "Insert Shot", "Cutaway Shot", "Over-The-Shoulder Shot (OTS)", "Point of View Shot (POV)"];
+const CAMERA_ANGLES = ["Eye-Level Shot", "Low Angle Shot", "High Angle Shot", "Bird’s Eye View", "Top Shot", "Dutch Angle", "Canted Angle", "Worm’s Eye View", "Shoulder Level Shot", "Hip Level Shot", "Knee Level Shot", "Ground Level Shot"];
+const CAMERA_MOVEMENTS = ["Static / None", "Pan Shot", "Tilt Shot", "Dolly Shot", "Tracking Shot", "Truck Shot", "Push-In Shot", "Pull-Out Shot", "Zoom In", "Zoom Out", "Crash Zoom", "Arc Shot", "Crane Shot", "Jib Shot", "Steadicam Shot", "Handheld Shot", "Drone Shot", "Whip Pan", "Roll Shot", "Orbit Shot", "Slider Shot"];
+const SPECIALTY_SHOTS = ["None", "Hero Entry Shot", "Silhouette Shot", "Reflection Shot", "Mirror Shot", "Rack Focus Shot", "Split Diopter Shot", "Lens Flare Shot", "Slow Motion Shot", "Time-Lapse Shot", "Hyperlapse Shot", "Freeze Frame", "Bullet Time Shot", "Long Take", "One Shot", "Continuous Shot", "360 Degree Shot", "Hidden Cut Shot", "Macro Shot", "Deep Focus Shot", "Shallow Focus Shot"];
+const LIGHTING_STYLES = ["Cinematic Lighting", "Natural Daylight", "Soft Studio", "Silhouette", "Cyberpunk", "High Key", "Low Key", "Neon", "Golden Hour Lighting", "Harsh Sunlight", "Mood Lighting"];
+const TIME_OF_DAY = ["Day", "Night", "Golden Hour", "Morning", "Evening", "Twilight", "Midnight", "Dawn", "Dusk", "Unspecified"];
 
-let IMAGE_STYLES = [
+const IMAGE_STYLES = [
     'Cinematic Realism', 'Hyper Realistic', 'Anime Style', 'Graphic Novel',
     'Hollywood Film Look', 'Indian Commercial Cinema', 'Neo Noir', 'Cyberpunk',
     'Vintage Film', 'Black and White', 'Watercolor Concept Art', '3D Pixar Style',
     'Dark Thriller', 'Epic Fantasy', 'Sci-Fi Concept Art', 'Moody Drama',
 ];
 
-let CINEMATIC_TONES = [
+const CINEMATIC_TONES = [
     'None / Default', 'Neo-Noir / Cynical Urban Darkness', 'Dreamlike / Surreal',
     'Hyper-Stylized Cool', 'Whimsical / Storybook', 'Slow Cinema / Meditative',
     'Existential / Philosophical', 'Atmospheric Horror', 'Grand Epic / Spectacle',
@@ -129,7 +81,7 @@ let CINEMATIC_TONES = [
     'Spiritual / Philosophical Art Cinema', 'Feel-Good Slice of Life', 'Mythic / Devotional Grandeur'
 ];
 
-let COLOR_PALETTES = [
+const COLOR_PALETTES = [
     'None / Default', 'Teal & Orange', 'Desaturated Gray / Bleach Bypass',
     'Warm Golden Palette', 'Cold Blue / Cyan Palette', 'Neon Cyberpunk Palette',
     'Earthy Natural Palette', 'High Saturation Pop Palette', 'Green-Tinted Palette',
@@ -138,32 +90,51 @@ let COLOR_PALETTES = [
     'Malayalam Realist Palette'
 ];
 
+const FILM_STOCKS = [
+    'Digital Clean (No Stock)', 'Kodak Vision3 250D', 'Kodak Vision3 500T', 'Kodak Portra 400',
+    'Kodak Ektachrome E100', 'CineStill 800T', 'Fuji Eterna 250D', 'Fuji Pro 400H',
+    'Ilford HP5 (B&W)', 'Kodak Tri-X (B&W)', 'Polaroid / Instant', 'Technicolor 3-Strip'
+];
+
+const DIFFUSION_FILTERS = [
+    'None (Clean)', 'Black Pro-Mist 1/8', 'Black Pro-Mist 1/4', 'Black Pro-Mist 1/2',
+    'Glimmerglass 1/4', 'Hollywood Black Magic 1/4', 'Classic Soft 1/2',
+    'Polarizer (CPL)', 'Split Diopter', 'Vintage Uncoated Flare'
+];
+
+const DOF_STYLES = [
+    'Auto / Lens-Based', 'Deep Focus (Everything Sharp)', 'Medium Depth', 'Shallow Focus',
+    'Razor-Shallow Bokeh', 'Tilt-Shift Miniature', 'Macro Detail'
+];
+
+const BOARD_STYLES = [
+    'Photoreal Frame', 'Pencil Sketch Storyboard', 'Marker Rendering', 'Black & White Line Art',
+    'Color Concept Sketch', 'Ink & Wash', 'Comic / Graphic Panel'
+];
+
+const GENRE_PRESETS = [
+    { name: 'Noir Thriller', style: 'Neo Noir', tone: 'Neo-Noir / Cynical Urban Darkness', palette: 'Dark Contrast / Chiaroscuro', time: 'Night' },
+    { name: 'Mass Action', style: 'Indian Commercial Cinema', tone: 'Mass Masala (Indian)', palette: 'Teal & Orange', time: 'Golden Hour' },
+    { name: 'Romance', style: 'Cinematic Realism', tone: 'Romantic-Political Lyrical (Mani Ratnam Style)', palette: 'Mani Ratnam Romantic Palette', time: 'Golden Hour' },
+    { name: 'Horror', style: 'Dark Thriller', tone: 'Atmospheric Horror', palette: 'Green-Tinted Palette', time: 'Night' },
+    { name: 'Period Drama', style: 'Hollywood Film Look', tone: 'Poetic Humanism (Indian)', palette: 'Warm Golden Palette', time: 'Day' },
+    { name: 'Sci-Fi', style: 'Sci-Fi Concept Art', tone: 'Grand Epic / Spectacle', palette: 'Cold Blue / Cyan Palette', time: 'Night' },
+    { name: 'Epic Fantasy', style: 'Epic Fantasy', tone: 'Mythic / Devotional Grandeur', palette: 'High Saturation Pop Palette', time: 'Golden Hour' }
+];
+
 const AI_DIRECTORS = [
-    "None / Auto",
-    "Christopher Nolan",
-    "S.S. Rajamouli",
-    "Denis Villeneuve",
-    "Mani Ratnam",
-    "Lokesh Kanagaraj",
-    "Quentin Tarantino",
-    "David Fincher",
-    "Wes Anderson",
-    "Sanjay Leela Bhansali",
-    "Vetrimaaran",
-    "Steven Spielberg",
-    "Martin Scorsese",
-    "Zack Snyder",
-    "Prashanth Neel"
+    "None / Auto", "Christopher Nolan", "S.S. Rajamouli", "Denis Villeneuve",
+    "Mani Ratnam", "Lokesh Kanagaraj", "Quentin Tarantino", "David Fincher",
+    "Wes Anderson", "Sanjay Leela Bhansali", "Vetrimaaran", "Steven Spielberg",
+    "Martin Scorsese", "Zack Snyder", "Prashanth Neel"
 ];
 
 const CAMERAS = [
-    "Auto / Any",
-    "ARRI Alexa 35", "ARRI Alexa Mini LF", "ARRI Alexa 65",
+    "Auto / Any", "ARRI Alexa 35", "ARRI Alexa Mini LF", "ARRI Alexa 65",
     "RED V-Raptor 8K VV", "RED Komodo 6K", "RED Monstro 8K VV",
     "Sony Venice 2", "Sony FX9", "Sony FX3", "Sony A7S III", "Sony A1", "Sony A7R V",
     "Canon C300 Mark III", "Canon C500 Mark II", "Canon EOS R5 C", "Canon EOS R3",
-    "Panavision Millennium DXL2",
-    "Blackmagic URSA Mini Pro 12K", "Blackmagic Pocket 6K",
+    "Panavision Millennium DXL2", "Blackmagic URSA Mini Pro 12K", "Blackmagic Pocket 6K",
     "Nikon Cinema / Z9", "Leica Z / Cinema", "Hasselblad SL"
 ];
 
@@ -223,6 +194,19 @@ const getFovCategory = (lensString) => {
     return "Unknown";
 };
 
+const parseDurationSec = (d) => {
+    if (typeof d === 'number') return d;
+    const m = String(d ?? '').match(/[\d.]+/);
+    return m ? parseFloat(m[0]) : 0;
+};
+
+const formatRuntime = (totalSec) => {
+    const s = Math.round(totalSec);
+    const mins = Math.floor(s / 60);
+    const rem = s % 60;
+    return mins > 0 ? `${mins}m ${rem}s` : `${rem}s`;
+};
+
 const getMovementBlurCharacteristics = (movementString) => {
     const lowerMovement = movementString.toLowerCase();
     if (lowerMovement.includes('pan')) return "Apply noticeable horizontal motion blur to the background to simulate a panning camera movement. The subject should remain relatively sharp if tracked.";
@@ -239,7 +223,20 @@ const getCharactersForShot = (shot, characters) => {
     if (!shot || !shot.characters_present || !Array.isArray(shot.characters_present)) return [];
     return shot.characters_present.map(name => {
         const cleanName = typeof name === 'string' ? name.trim() : String(name).trim();
-        const charObj = characters.find(c => c.name.toLowerCase() === cleanName.toLowerCase());
+        const lowerCleanName = cleanName.toLowerCase();
+        
+        const charObj = characters.find(c => {
+            const cName = c.name.toLowerCase();
+            const baseName = cName.split('(')[0].trim();
+            const bracketMatch = cName.match(/\((.*?)\)/);
+            const actorName = bracketMatch ? bracketMatch[1].trim() : '';
+
+            return cName === lowerCleanName || 
+                   baseName === lowerCleanName || 
+                   cName.includes(lowerCleanName) || 
+                   lowerCleanName.includes(baseName) ||
+                   (actorName && lowerCleanName.includes(actorName));
+        });
         return charObj || { name: cleanName, gender: '', age: '', description: '', images: [] };
     });
 };
@@ -264,7 +261,7 @@ const InpaintingEditor = ({ imageUrl, onClose, onApply, isGenerating }) => {
             const ctx = canvasRef.current.getContext('2d');
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)'; // Semi-transparent Red
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
         }
     };
 
@@ -275,7 +272,7 @@ const InpaintingEditor = ({ imageUrl, onClose, onApply, isGenerating }) => {
 
     const draw = (e, isFirst = false) => {
         if (!isDrawing && !isFirst) return;
-        e.preventDefault(); // Prevent scrolling on touch devices
+        e.preventDefault(); 
         
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
@@ -403,19 +400,12 @@ const StagingEditor = ({ sceneId, shot, characters, updateShotBlocking, onClose,
     const [dragState, setDragState] = useState(null);
     const boardRef = useRef(null);
 
-    // Keep local elements state in sync if parent updates it (e.g. initial auto-generation)
     useEffect(() => {
         if (shot.blockingData?.elements) {
             setElements(shot.blockingData.elements);
         }
     }, [shot.blockingData?.elements]);
 
-    const saveToParent = (newElements) => {
-        setElements(newElements);
-        updateShotBlocking(sceneId, shot.id, { elements: newElements });
-    };
-
-    // Remove elements from the dependency array so dragging doesn't thrash the listener
     useEffect(() => {
         const handleGlobalMouseMove = (e) => {
             if (!dragState || !boardRef.current) return;
@@ -431,7 +421,6 @@ const StagingEditor = ({ sceneId, shot, characters, updateShotBlocking, onClose,
         const handleGlobalMouseUp = () => {
             if (dragState) {
                 setDragState(null);
-                // Save the final state back to the parent component
                 setElements(prev => {
                     updateShotBlocking(sceneId, shot.id, { elements: prev });
                     return prev;
@@ -447,32 +436,44 @@ const StagingEditor = ({ sceneId, shot, characters, updateShotBlocking, onClose,
             window.removeEventListener('mousemove', handleGlobalMouseMove);
             window.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [dragState, sceneId, shot.id, updateShotBlocking]); // Intentionally removed 'elements'
+    }, [dragState, sceneId, shot.id, updateShotBlocking]);
 
     const handleAdd = (type) => {
-        const newEl = {
-            id: Date.now(),
-            type,
-            label: type === 'camera' ? 'CAM A' : type === 'actor' ? 'Actor' : type === 'light' ? 'Key Light' : 'Prop',
-            x: 50,
-            y: 50,
-            rotation: 0,
-            color: type === 'camera' ? '#10b981' : type === 'actor' ? '#3b82f6' : type === 'light' ? '#fef08a' : '#a1a1aa',
-            height: type === 'camera' ? 1.5 : undefined,
-            pitch: type === 'camera' ? 0 : undefined,
-            focalLength: type === 'camera' ? 35 : undefined,
-            intensity: type === 'light' ? 80 : undefined
-        };
-        saveToParent([...elements, newEl]);
-        setSelectedId(newEl.id);
+        setElements(prev => {
+            const newEl = {
+                id: Date.now(),
+                type,
+                label: type === 'camera' ? 'CAM A' : type === 'actor' ? 'Actor' : type === 'light' ? 'Key Light' : 'Prop',
+                x: 50,
+                y: 50,
+                rotation: 0,
+                color: type === 'camera' ? '#10b981' : type === 'actor' ? '#3b82f6' : type === 'light' ? '#fef08a' : '#a1a1aa',
+                height: type === 'camera' ? 1.5 : undefined,
+                pitch: type === 'camera' ? 0 : undefined,
+                focalLength: type === 'camera' ? 35 : undefined,
+                intensity: type === 'light' ? 80 : undefined
+            };
+            const newElements = [...prev, newEl];
+            updateShotBlocking(sceneId, shot.id, { elements: newElements });
+            setSelectedId(newEl.id);
+            return newElements;
+        });
     };
 
     const updateSelected = (updates) => {
-        saveToParent(elements.map(el => el.id === selectedId ? { ...el, ...updates } : el));
+        setElements(prev => {
+            const newElements = prev.map(el => el.id === selectedId ? { ...el, ...updates } : el);
+            updateShotBlocking(sceneId, shot.id, { elements: newElements });
+            return newElements;
+        });
     };
 
     const removeSelected = () => {
-        saveToParent(elements.filter(el => el.id !== selectedId));
+        setElements(prev => {
+            const newElements = prev.filter(el => el.id !== selectedId);
+            updateShotBlocking(sceneId, shot.id, { elements: newElements });
+            return newElements;
+        });
         setSelectedId(null);
     };
 
@@ -548,7 +549,6 @@ const StagingEditor = ({ sceneId, shot, characters, updateShotBlocking, onClose,
                                     <div className="w-8 h-8 bg-zinc-800 border-2 rounded flex items-center justify-center z-10 shadow-lg" style={{ borderColor: el.color }}>
                                         <Camera className="w-4 h-4" style={{ color: el.color }} />
                                     </div>
-                                    {/* View Cone */}
                                     <div className="absolute top-[100%] w-0 h-0 border-l-[30px] border-r-[30px] border-t-[80px] border-transparent opacity-30 pointer-events-none" style={{ borderTopColor: el.color }}></div>
                                 </div>
                             )}
@@ -571,7 +571,6 @@ const StagingEditor = ({ sceneId, shot, characters, updateShotBlocking, onClose,
                                 </div>
                             )}
                             
-                            {/* Upright Label */}
                             <div className="absolute -bottom-6 text-[9px] font-bold text-white bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap" style={{ transform: `rotate(${-el.rotation}deg)` }}>
                                 {el.label}
                             </div>
@@ -735,14 +734,29 @@ export default function App() {
     const [selectedTone, setSelectedTone] = useState('None / Default');
     const [selectedPalette, setSelectedPalette] = useState('None / Default');
     const [selectedGlobalTime, setSelectedGlobalTime] = useState('Unspecified');
+    const [selectedGlobalCamera, setSelectedGlobalCamera] = useState('Auto / Any');
+    const [selectedGlobalLensGroup, setSelectedGlobalLensGroup] = useState('Auto / Any');
     const [selectedDirector, setSelectedDirector] = useState('None / Auto');
+    const [selectedFilmStock, setSelectedFilmStock] = useState('Digital Clean (No Stock)');
+    const [selectedDiffusion, setSelectedDiffusion] = useState('None (Clean)');
+    const [selectedDof, setSelectedDof] = useState('Auto / Lens-Based');
+    const [selectedBoardStyle, setSelectedBoardStyle] = useState('Photoreal Frame');
+    const [enforceContinuity, setEnforceContinuity] = useState(false);
+    const [isAnimaticPlaying, setIsAnimaticPlaying] = useState(false);
     const [isDirectorDropdownOpen, setIsDirectorDropdownOpen] = useState(false);
     const [directorSearchQuery, setDirectorSearchQuery] = useState('');
     const [directorSearchResults, setDirectorSearchResults] = useState([]);
     const [isSearchingDirector, setIsSearchingDirector] = useState(false);
     const [scriptLanguage, setScriptLanguage] = useState('Auto-Detect Native Language');
-    const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('user_api_key') || '');
-    const apiKey = customApiKey || ''; // Automatically provided by the environment at runtime
+    const apiKey = ''; // Automatically provided by the environment at runtime
+
+    const GEMINI_TEXT_MODEL = 'gemini-2.5-flash-preview-09-2025';
+    const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image-preview';
+    const geminiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const makeFrameId = (sceneId, shotId) => `${sceneId}-${shotId}`;
+    const makeLastFrameId = (sceneId, shotId) => `${sceneId}-${shotId}-last`;
+    const makeMcFrameId = (sceneId, shotId, mcId) => `${sceneId}-${shotId}-mc-${mcId}`;
     
     const [generatingIds, setGeneratingIds] = useState(new Set());
     const generatingIdsRef = useRef(new Set());
@@ -766,13 +780,13 @@ export default function App() {
     const [editingLocationId, setEditingLocationId] = useState(null);
 
     const [expandedChars, setExpandedChars] = useState(new Set());
-    const [activeStagingShotId, setActiveStagingShotId] = useState(null); // Added State for Blocking Editor
+    const [activeStagingShotId, setActiveStagingShotId] = useState(null);
 
     const [history, setHistory] = useState([]);
     const [projectName, setProjectName] = useState("My Project");
     const [alertMessage, setAlertMessage] = useState('');
     const [isGoogleLoggedIn, setIsGoogleLoggedIn] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('script');
     const [showExportMenu, setShowExportMenu] = useState(false);
 
     const [isAnalyzingDna, setIsAnalyzingDna] = useState(false);
@@ -782,55 +796,164 @@ export default function App() {
     const [showAppSlider, setShowAppSlider] = useState(false);
     const [sliderIndex, setSliderIndex] = useState(0);
 
-    const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-    const audioRef = useRef(null);
-
     const [enforceLikeness, setEnforceLikeness] = useState(false);
     
     const [fullscreenImage, setFullscreenImage] = useState(null);
+    const [pendingActorMatch, setPendingActorMatch] = useState(null);
 
-    // Keep refs synced for background async loops
     useEffect(() => { parsedScenesRef.current = parsedScenes; }, [parsedScenes]);
     useEffect(() => { generatedImagesRef.current = generatedImages; }, [generatedImages]);
     useEffect(() => { generatingIdsRef.current = generatingIds; }, [generatingIds]);
     useEffect(() => { generatedBreakdownsRef.current = generatedBreakdowns; }, [generatedBreakdowns]);
     useEffect(() => { isAutomatingRef.current = isAutomating; }, [isAutomating]);
 
-    // Add global fetch interceptor to gracefully handle 429 Rate Limits from Google API
+    const identifyActorFromImage = async (base64Data, mimeType) => {
+        try {
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { inlineData: { mimeType, data: base64Data } },
+                        { text: "Analyze this image. If it contains a recognizable famous actor or celebrity, identify them. Return ONLY a valid JSON object with the following schema: {\"recognized\": true/false, \"name\": \"Full Name\", \"gender\": \"Male/Female\", \"age\": \"approximate age (e.g., 40s)\", \"traits\": \"brief visual description of their typical cinematic look\"}. If no recognizable person is found, return {\"recognized\": false}." }
+                    ]
+                }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const result = await response.json();
+            if (result.candidates?.[0]?.content?.parts?.[0]) {
+                const text = result.candidates[0].content.parts[0].text;
+                return parseAIJson(text);
+            }
+            return { recognized: false };
+        } catch (e) {
+            console.error("Actor ID failed", e);
+            return { recognized: false };
+        }
+    };
+
+    const searchActorDetails = async (query) => {
+        try {
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: `Search for the actor: ${query}. Return ONLY a valid JSON object: {"recognized": true/false, "name": "Full Exact Name", "gender": "Male/Female", "age": "current age or age range", "traits": "brief visual description of their look"}. If not a real actor, return {"recognized": false}.` }] }],
+                tools: [{ "google_search": {} }]
+            };
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const result = await response.json();
+            if (result.candidates?.[0]?.content?.parts?.[0]) {
+                const text = result.candidates[0].content.parts[0].text;
+                return parseAIJson(text);
+            }
+            return { recognized: false };
+        } catch (e) {
+            console.error("Actor Search failed", e);
+            return { recognized: false };
+        }
+    };
+
+    const handleSearchActorName = async (id, currentName) => {
+        if (!currentName.trim()) return;
+        setAiStatus(`Searching database for "${currentName}"...`);
+        const result = await searchActorDetails(currentName);
+        if (result && result.recognized) {
+            setPendingActorMatch({ 
+                targetType: id ? 'existing' : 'new', 
+                charId: id, 
+                currentName: currentName,
+                imageDatas: null, 
+                detectedInfo: result 
+            });
+            setAiStatus("Actor found! Waiting for confirmation.");
+        } else {
+            setAlertMessage(`Could not confidently match "${currentName}" to a known actor.`);
+            setAiStatus("Actor search finished.");
+        }
+    };
+
+    const handleConfirmActorMatch = (applyDetails) => {
+        const { targetType, charId, currentName, imageDatas, detectedInfo } = pendingActorMatch;
+        
+        let finalName = detectedInfo.name;
+        if (currentName && currentName.trim() && currentName.trim().toLowerCase() !== detectedInfo.name.toLowerCase()) {
+            if (!currentName.includes('(')) {
+                finalName = `${currentName.trim()} (${detectedInfo.name})`;
+            } else {
+                 finalName = currentName; 
+            }
+        }
+        
+        if (targetType === 'new') {
+            if (applyDetails) {
+                setNewCharName(finalName);
+                setNewCharGender(detectedInfo.gender);
+                setNewCharAge(detectedInfo.age);
+                setNewCharDescription(detectedInfo.traits);
+            }
+            if (imageDatas && imageDatas.length > 0) {
+                setNewCharImage(imageDatas[0]);
+            }
+        } else if (targetType === 'existing') {
+            if (applyDetails) {
+                setCharacters(prev => prev.map(c => {
+                    if (c.id === charId) {
+                        return {
+                            ...c,
+                            name: finalName,
+                            gender: detectedInfo.gender,
+                            age: detectedInfo.age,
+                            description: detectedInfo.traits,
+                            images: imageDatas ? [...(c.images || []), ...imageDatas] : c.images
+                        };
+                    }
+                    return c;
+                }));
+            } else if (imageDatas) {
+                setCharacters(prev => prev.map(c => {
+                    if (c.id === charId) {
+                        return { ...c, images: [...(c.images || []), ...imageDatas] };
+                    }
+                    return c;
+                }));
+            }
+        }
+        
+        setPendingActorMatch(null);
+        setAiStatus("Character profile updated.");
+    };
+
     useEffect(() => {
         const originalFetch = window.fetch;
         window.fetch = async (...args) => {
             const url = args[0];
             if (typeof url === 'string' && url.includes('generativelanguage.googleapis.com')) {
-                for (let i = 0; i < 4; i++) { // Automatically retry up to 4 times
+                for (let i = 0; i < 4; i++) { 
                     const response = await originalFetch(...args);
                     if (response.status === 429) {
-                        let waitTime = 15000 * (i + 1); // Default wait if parser fails
+                        let waitTime = 15000 * (i + 1); 
                         try {
                             const cloned = response.clone();
                             const errData = await cloned.json();
-                            // Extract exact required wait time from Google's error string
                             const match = errData.error?.message?.match(/retry in (\d+\.?\d*)s/);
                             if (match && match[1]) {
-                                waitTime = parseFloat(match[1]) * 1000 + 2000; // Add 2s safety buffer
+                                waitTime = parseFloat(match[1]) * 1000 + 2000; 
                             }
                         } catch(e) {}
                         
-                        // Update UI to let user know it's just paused, not broken
                         setAiStatus(`API Rate Limit (Free Tier). Pausing for ${Math.ceil(waitTime/1000)}s...`);
                         console.warn(`[Rate Limit 429] API exhausted. Auto-retrying in ${Math.ceil(waitTime/1000)}s...`);
                         
-                        // Sleep for the required time
                         await new Promise(r => setTimeout(r, waitTime));
                         setAiStatus('Resuming AI operations...');
-                        continue; // Retry the original fetch request transparently
+                        continue; 
                     }
                     return response;
                 }
             }
             return originalFetch(...args);
         };
-        return () => { window.fetch = originalFetch; }; // Cleanup
+        return () => { window.fetch = originalFetch; }; 
     }, []);
 
     const handleScriptUpload = async (e) => {
@@ -877,13 +1000,12 @@ export default function App() {
                     let lastY = null;
                     
                     textContent.items.forEach(item => {
-                        // Insert line break if vertical position changes significantly
                         if (lastY !== null && Math.abs(lastY - item.transform[5]) > 5) {
                             pageText += '\n';
                         } else if (lastY !== null && item.hasEOL) {
                             pageText += '\n';
                         } else if (lastY !== null) {
-                            pageText += ' '; // Add space for items on the same line
+                            pageText += ' '; 
                         }
                         pageText += item.str;
                         lastY = item.transform[5];
@@ -891,7 +1013,6 @@ export default function App() {
                     
                     fullText += pageText + '\n\n';
                     
-                    // Small delay to keep UI responsive for massive PDFs
                     if (i % 10 === 0) await new Promise(r => setTimeout(r, 10));
                 }
 
@@ -924,7 +1045,7 @@ export default function App() {
                     }]
                 };
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+                const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -1057,7 +1178,6 @@ Return a JSON object STRICTLY matching this structure:
             if (file) {
                 if (file.type.startsWith('video/')) {
                     setAiStatus('Extracting periodic frames from video...');
-                    // Extract 5 frames spaced out evenly across the video
                     const frames = await extractFramesFromVideo(file, 5);
                     setAiStatus('Analyzing extracted video frames...');
                     
@@ -1081,7 +1201,7 @@ Return a JSON object STRICTLY matching this structure:
 
             payload.contents[0].parts.push({ text: "Perform an extreme deep-dive extraction of this media's cinematic DNA." });
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
             if (!response.ok) throw new Error("DNA Extraction API error");
@@ -1092,7 +1212,6 @@ Return a JSON object STRICTLY matching this structure:
                 const parsedData = parseAIJson(jsonText);
                 setExtractedDnaStyle(parsedData);
                 
-                // Map and apply dropdown configurations automatically for high-fidelity UI synchronization
                 const matchedTone = findClosestTone(parsedData.mood);
                 const matchedPalette = findClosestPalette(parsedData.colorGrade);
                 
@@ -1126,13 +1245,14 @@ Return a JSON object STRICTLY matching this structure:
             const safeShots = Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {});
             const sortedShots = [...safeShots].sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
             sortedShots.forEach(shot => {
-                const frameId = `${scene.id}-${shot.id}`;
+                const frameId = makeFrameId(scene.id, shot.id);
                 if (generatedImages[frameId]) {
                     frames.push({
                         sceneTitle: scene.title,
                         shotType: shot.type,
                         shotOrder: shot.order ?? shot.id,
                         snippet: shot.script_snippet,
+                        duration: parseDurationSec(shot.duration) || 4,
                         image: generatedImages[frameId]
                     });
                 }
@@ -1151,6 +1271,19 @@ Return a JSON object STRICTLY matching this structure:
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [showAppSlider, sliderFrames.length]);
+
+    useEffect(() => {
+        if (!showAppSlider || !isAnimaticPlaying || sliderFrames.length === 0) return;
+        const current = sliderFrames[sliderIndex];
+        const ms = Math.max(1000, (current?.duration || 4) * 1000);
+        const timer = setTimeout(() => {
+            setSliderIndex(prev => {
+                if (prev >= sliderFrames.length - 1) { setIsAnimaticPlaying(false); return prev; }
+                return prev + 1;
+            });
+        }, ms);
+        return () => clearTimeout(timer);
+    }, [showAppSlider, isAnimaticPlaying, sliderIndex, sliderFrames.length]);
 
     useEffect(() => {
         const handleEscapeFullscreen = (e) => {
@@ -1250,13 +1383,16 @@ Return a JSON object STRICTLY matching this structure:
         setLocations([]);
         setProjectName("My Project");
         setExtractedDnaStyle(null);
-        setEditTargetRegions({});
         setAiStatus('Workspace reset to blank state');
     };
 
+    const handleExportDirectorsBoard = () => setAlertMessage("Director's Board export feature is currently in development.");
+    const handleExportCinematographersBoard = () => setAlertMessage("Cinematographer's Board export feature is currently in development.");
+    const handleExportProductionBoards = () => setAlertMessage("Production Boards export feature is currently in development.");
+
     const handleExportProject = () => {
         try {
-            const projectData = { parsedScenes, generatedImages, generatedCollages, generatedBreakdowns, generatedCostumeBoards, characters, locations, script, selectedStyle, aspectRatio, selectedTone, selectedPalette, selectedDirector, scriptLanguage, projectName, selectedGlobalTime };
+            const projectData = { parsedScenes, generatedImages, generatedCollages, generatedBreakdowns, generatedCostumeBoards, characters, locations, script, selectedStyle, aspectRatio, selectedTone, selectedPalette, selectedDirector, scriptLanguage, projectName, selectedGlobalTime, selectedGlobalCamera, selectedGlobalLensGroup, selectedFilmStock, selectedDiffusion, selectedDof, selectedBoardStyle, enforceContinuity };
             const jsonStr = JSON.stringify(projectData);
             const blob = new Blob([jsonStr], { type: "application/json" });
             const url = window.URL.createObjectURL(blob);
@@ -1291,7 +1427,6 @@ Return a JSON object STRICTLY matching this structure:
                 if (data.generatedBreakdowns) setGeneratedBreakdowns(data.generatedBreakdowns);
                 if (data.generatedCostumeBoards) setGeneratedCostumeBoards(data.generatedCostumeBoards);
                 
-                // Repair broken local blob URLs from legacy saves
                 if (data.characters) {
                     const repairedChars = data.characters.map(c => ({
                         ...c,
@@ -1305,7 +1440,6 @@ Return a JSON object STRICTLY matching this structure:
                     setCharacters(repairedChars);
                 }
                 
-                // Repair broken local blob URLs from legacy saves
                 if (data.locations) {
                     const repairedLocs = data.locations.map(l => {
                         if (l.image && l.image.url && l.image.url.startsWith('blob:') && l.image.data) {
@@ -1322,7 +1456,14 @@ Return a JSON object STRICTLY matching this structure:
                 if (data.selectedTone) setSelectedTone(data.selectedTone);
                 if (data.selectedPalette) setSelectedPalette(data.selectedPalette);
                 if (data.selectedDirector) setSelectedDirector(data.selectedDirector);
+                if (data.selectedFilmStock) setSelectedFilmStock(data.selectedFilmStock);
+                if (data.selectedDiffusion) setSelectedDiffusion(data.selectedDiffusion);
+                if (data.selectedDof) setSelectedDof(data.selectedDof);
+                if (data.selectedBoardStyle) setSelectedBoardStyle(data.selectedBoardStyle);
+                if (typeof data.enforceContinuity === 'boolean') setEnforceContinuity(data.enforceContinuity);
                 if (data.selectedGlobalTime) setSelectedGlobalTime(data.selectedGlobalTime);
+                if (data.selectedGlobalCamera) setSelectedGlobalCamera(data.selectedGlobalCamera);
+                if (data.selectedGlobalLensGroup) setSelectedGlobalLensGroup(data.selectedGlobalLensGroup);
                 if (data.scriptLanguage) setScriptLanguage(data.scriptLanguage);
                 if (data.projectName) setProjectName(data.projectName);
                 setAiStatus('Project imported successfully!');
@@ -1344,8 +1485,6 @@ Return a JSON object STRICTLY matching this structure:
         if (!dataUrl) return;
         
         try {
-            // Convert Base64 dataUrl to a Blob to prevent mobile browser crashes 
-            // caused by extremely long href attributes.
             const response = await fetch(dataUrl);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -1357,126 +1496,18 @@ Return a JSON object STRICTLY matching this structure:
             document.body.appendChild(a);
             a.click();
             
-            // Clean up the URL object to free up mobile memory
             setTimeout(() => {
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
             }, 150);
         } catch (error) {
             console.error("Blob conversion failed, attempting fallback download:", error);
-            // Fallback just in case
             const a = document.createElement('a');
             a.href = dataUrl;
             a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-        }
-    };
-
-    const generateDirectorNotes = async (sceneId) => {
-        const scene = parsedScenesRef.current.find(s => s.id === sceneId);
-        if (!scene) return;
-
-        setAiStatus(`Generating Director Notes for Scene ${sceneId}...`);
-        setGeneratingIds(prev => new Set(prev).add(`notes-${sceneId}`));
-        
-        try {
-            const directorPersona = selectedDirector !== 'None / Auto' 
-                ? `You are ${selectedDirector}. Speak directly in your distinct directorial voice and explain your grand vision for this scene.` 
-                : `You are an expert film director.`;
-                
-            const systemInst = `${directorPersona} Analyze the provided script scene. Provide a "Director's Treatment" (around 3-4 short, punchy sentences) explaining your psychological approach, the visual metaphor, your staging/blocking strategy, and exactly how you want the audience to feel. Keep it highly actionable for the cinematographer. Use "I want..." or "We need..." terminology.`;
-            
-            const payload = {
-                contents: [{ role: 'user', parts: [{ text: `Scene Title: ${scene.title}\nScript Action/Dialogue:\n${scene.description}` }] }],
-                systemInstruction: { parts: [{ text: systemInst }] }
-            };
-            
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            
-            if (!response.ok) throw new Error("Notes API error");
-            
-            const result = await response.json();
-            if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-                const notes = result.candidates[0].content.parts[0].text;
-                updateSceneDetails(sceneId, 'directorNotes', notes.trim());
-                setAiStatus(`Director notes generated successfully!`);
-            }
-        } catch (err) {
-            console.error(err);
-            setAiStatus('Failed to generate director notes.');
-        } finally {
-            setGeneratingIds(prev => { const newSet = new Set(prev); newSet.delete(`notes-${sceneId}`); return newSet; });
-        }
-    };
-
-    const handleReadScene = async (text, sceneId) => {
-        if (!text) return;
-        if (isPlayingAudio) {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current = null;
-            }
-            setIsPlayingAudio(false);
-            return;
-        }
-
-        setAiStatus(`Generating cinematic narration for Scene ${sceneId}...`);
-        setGeneratingIds(prev => new Set(prev).add(`audio-${sceneId}`));
-        setIsPlayingAudio(true);
-
-        try {
-            const payload = {
-                contents: [{ parts: [{ text: text }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: "Charon" } // Charon is an informative voice, great for reading scripts
-                        }
-                    }
-                },
-                model: "gemini-3.5-flash"
-            };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) throw new Error("TTS API error");
-
-            const result = await response.json();
-            const part = result?.candidates?.[0]?.content?.parts?.[0];
-            const audioData = part?.inlineData?.data;
-            const mimeType = part?.inlineData?.mimeType;
-
-            if (audioData && mimeType && mimeType.startsWith("audio/")) {
-                const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-                const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 24000;
-                const pcmData = base64ToArrayBuffer(audioData);
-                const pcm16 = new Int16Array(pcmData);
-                const wavBlob = pcmToWav(pcm16, sampleRate);
-                const audioUrl = URL.createObjectURL(wavBlob);
-
-                const audio = new Audio(audioUrl);
-                audioRef.current = audio;
-                audio.onended = () => setIsPlayingAudio(false);
-                audio.play();
-                setAiStatus('Playing scene narration...');
-            } else {
-                throw new Error("No audio data returned");
-            }
-        } catch (error) {
-            console.error("TTS Error:", error);
-            setAiStatus("Failed to generate audio.");
-            setIsPlayingAudio(false);
-        } finally {
-            setGeneratingIds(prev => { const newSet = new Set(prev); newSet.delete(`audio-${sceneId}`); return newSet; });
         }
     };
 
@@ -1505,11 +1536,10 @@ Each result MUST be an object with this exact structure:
             const payload = {
                 contents: [{ role: 'user', parts: [{ text: "Search Query: " + query }] }],
                 systemInstruction: { parts: [{ text: systemInst }] },
-                tools: [{ "google_search": {} }],
-                generationConfig: { responseMimeType: "application/json" }
+                tools: [{ "google_search": {} }]
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
             if (!response.ok) throw new Error("Search API error");
@@ -1527,7 +1557,6 @@ Each result MUST be an object with this exact structure:
                     resultsArray = parsedData.directors;
                 }
                 
-                // Ensure legacy strings are mapped to rich objects if the AI ever hallucinates
                 const formattedResults = resultsArray.map(item => {
                     if (typeof item === 'string') {
                         return { displayName: item, type: 'Director', details: 'Known for cinematic excellence', promptValue: item };
@@ -1559,7 +1588,7 @@ Each result MUST be an object with this exact structure:
                 contents: [{ role: "user", parts: [{ text: `Original prompt: ${shot.prompt}\n\nEnhance this into a highly cinematic description.` }] }],
                 systemInstruction: { parts: [{ text: systemInst }] }
             };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const result = await response.json();
             if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
@@ -1587,7 +1616,7 @@ Each result MUST be an object with this exact structure:
                 contents: [{ role: "user", parts: [{ text: `Character Name: ${char.name}, Gender: ${char.gender || 'Any'}, Age: ${char.age || 'Any'}. Current details: ${char.description || 'None'}\n\nExpand this.` }] }],
                 systemInstruction: { parts: [{ text: systemInst }] }
             };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const result = await response.json();
             if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
@@ -1646,7 +1675,7 @@ Each result MUST be an object with this exact structure:
                 const safeShots = Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {});
                 const sortedShotsForZIP = [...safeShots].sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
                 for (const shot of sortedShotsForZIP) {
-                    const frameId = `${scene.id}-${shot.id}`;
+                    const frameId = makeFrameId(scene.id, shot.id);
                     const base64Img = generatedImages[frameId];
                     if (base64Img) {
                         const match = base64Img.match(/data:image\/(.*?);base64,(.*)/);
@@ -1691,6 +1720,47 @@ Each result MUST be an object with this exact structure:
         } catch (err) {
             console.error("ZIP Generation failed:", err);
             setAiStatus('Failed to create ZIP file.');
+        }
+    };
+
+    const handleExportShotList = () => {
+        try {
+            const esc = (v) => {
+                const s = (v === undefined || v === null) ? '' : String(v);
+                return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+            };
+            const headers = ['Scene #', 'Scene Title', 'Shot Order', 'Framing', 'Angle', 'Movement', 'Specialty', 'Lens', 'Camera', 'Lighting', 'Time of Day', 'Duration (s)', 'Characters', 'Dialogue / Notes', 'Prompt'];
+            const rows = [headers.join(',')];
+            parsedScenes.forEach(scene => {
+                const shots = Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {});
+                const sorted = [...shots].sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
+                sorted.forEach(shot => {
+                    rows.push([
+                        scene.id, scene.title, (shot.order ?? shot.id),
+                        shot.type, shot.cameraAngle, shot.cameraMovement, shot.specialtyShot,
+                        shot.lens, shot.camera, shot.lighting, shot.timeOfDay,
+                        parseDurationSec(shot.duration),
+                        getCharactersForShotString(shot, characters),
+                        shot.notes || shot.script_snippet || '',
+                        shot.prompt
+                    ].map(esc).join(','));
+                });
+            });
+            rows.push('');
+            rows.push(esc('TOTAL ESTIMATED RUNTIME') + ',' + esc(formatRuntime(totalRuntimeSec)));
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(projectName || 'project').replace(/[^a-z0-9]/gi, '_')}_shotlist.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setAiStatus('Shot list exported (CSV).');
+        } catch (e) {
+            console.error('Shot list export failed', e);
+            setAlertMessage('Failed to export shot list.');
         }
     };
 
@@ -1740,14 +1810,14 @@ Each result MUST be an object with this exact structure:
                 const loadedImages = {};
                 
                 const loadShotPromises = sortedShots.map(shot => {
-                    const frameId = `${scene.id}-${shot.id}`;
+                    const frameId = makeFrameId(scene.id, shot.id);
                     const imgSrc = generatedImages[frameId];
                     if (imgSrc) {
                         return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                loadedImages[frameId] = img;
-                resolve();
+                            const img = new Image();
+                            img.onload = () => {
+                                loadedImages[frameId] = img;
+                                resolve();
                             };
                             img.onerror = () => resolve();
                             img.src = imgSrc;
@@ -1980,7 +2050,7 @@ Each result MUST be an object with this exact structure:
 
                     for (const layout of shotLayouts) {
                         const { shot, charsInShot } = layout;
-                        const frameId = `${scene.id}-${shot.id}`;
+                        const frameId = makeFrameId(scene.id, shot.id);
                         const yStart = shotYOffset;
                         
                         ctx.fillStyle = '#f8f8fa'; 
@@ -2138,969 +2208,25 @@ Each result MUST be an object with this exact structure:
         }
     };
 
-    const handleExportProductionBoards = async () => {
-        if (parsedScenes.length === 0) {
-            setAiStatus('No scenes to export.');
-            return;
-        }
-
-        setAiStatus('Generating high-res Production Boards...');
-        setGeneratingIds(prev => new Set(prev).add('exporting-production-boards'));
-
-        try {
-            if (!window.JSZip) {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
-            }
-            
-            const zip = new window.JSZip();
-            let boardCount = 0;
-
-            for (const scene of parsedScenes) {
-                const sceneTitle = scene.title || `Scene ${scene.id}`;
-                const safeShots = Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {});
-                const sortedShots = [...safeShots].sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
-                
-                if (sortedShots.length === 0) continue;
-
-                const padding = 60;
-                const boardWidth = 1920; 
-                const headerHeight = 850; 
-                const shotSpacing = 80;
-                const shotImgWidth = 600;
-                const textPanelWidth = boardWidth - padding * 3 - shotImgWidth;
-                const SHOTS_PER_PAGE = 3;
-
-                const shotPages = [];
-                for (let i = 0; i < sortedShots.length; i += SHOTS_PER_PAGE) {
-                    shotPages.push(sortedShots.slice(i, i + SHOTS_PER_PAGE));
-                }
-
-                const loadedImages = {};
-                
-                const loadShotPromises = sortedShots.map(shot => {
-                    const frameId = `${scene.id}-${shot.id}`;
-                    const imgSrc = generatedImages[frameId];
-                    if (imgSrc) {
-                        return new Promise((resolve) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                loadedImages[frameId] = img;
-                                resolve();
-                            };
-                            img.onerror = () => resolve();
-                            img.src = imgSrc;
-                        });
-                    }
-                    return Promise.resolve();
-                });
-
-                const sceneLocationIds = scene.locationIds || [];
-                const sceneLocations = locations.filter(loc => sceneLocationIds.includes(loc.id));
-                const loadLocPromises = sceneLocations.map(loc => {
-                    if (loc.image && (loc.image.data || loc.image.url)) {
-                        return new Promise((resolve) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                loadedImages[`loc-${loc.id}`] = img;
-                                resolve();
-                            };
-                            img.onerror = () => resolve();
-                            img.src = loc.image.data ? `data:${loc.image.mimeType || 'image/jpeg'};base64,${loc.image.data}` : loc.image.url;
-                        });
-                    }
-                    return Promise.resolve();
-                });
-
-                let charactersInScene = new Set();
-                sortedShots.forEach(shot => {
-                    const chars = getCharactersForShot(shot, characters);
-                    chars.forEach(c => charactersInScene.add(c));
-                });
-                const sceneCharactersArray = Array.from(charactersInScene);
-
-                await Promise.all([...loadShotPromises, ...loadLocPromises]);
-
-                for (let pageIndex = 0; pageIndex < shotPages.length; pageIndex++) {
-                    const currentShots = shotPages[pageIndex];
-                    
-                    const shotLayouts = [];
-                    let totalHeight = padding;
-
-                    if (pageIndex === 0) {
-                        totalHeight += headerHeight;
-                    } else {
-                        totalHeight += 150; 
-                    }
-
-                    const estimateTextHeight = (text, maxWidth, fontStr) => {
-                        const dummyCanvas = document.createElement('canvas');
-                        const dummyCtx = dummyCanvas.getContext('2d');
-                        dummyCtx.font = fontStr;
-                        const words = (text || '').split(' ');
-                        let lines = 1;
-                        let currentLine = '';
-                        for (let i = 0; i < words.length; i++) {
-                            const testLine = currentLine + words[i] + ' ';
-                            const metrics = dummyCtx.measureText(testLine);
-                            if (metrics.width > maxWidth && i > 0) {
-                                lines++;
-                                currentLine = words[i] + ' ';
-                            } else {
-                                currentLine = testLine;
-                            }
-                        }
-                        return lines * parseInt(fontStr.match(/\d+/)[0]) * 1.5;
-                    };
-
-                    for (const shot of currentShots) {
-                        const charsInShot = getCharactersForShotString(shot, characters);
-                        const promptHeight = estimateTextHeight(shot.prompt || 'No description', textPanelWidth, '24px sans-serif');
-                        const snippetHeight = shot.script_snippet ? estimateTextHeight(`"${shot.script_snippet}"`, textPanelWidth, 'italic 24px sans-serif') + 40 : 0;
-                        const metaHeight = 250; 
-                        const [ratioW, ratioH] = aspectRatio.split(':').map(Number);
-                        const expectedImgHeight = (shotImgWidth * ratioH) / ratioW;
-
-                        const contentHeight = Math.max(expectedImgHeight, metaHeight + promptHeight + snippetHeight);
-                        
-                        shotLayouts.push({
-                            shot: shot,
-                            height: contentHeight,
-                            yStart: totalHeight,
-                            charsInShot: charsInShot
-                        });
-
-                        totalHeight += contentHeight + shotSpacing;
-                    }
-
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = boardWidth;
-                    canvas.height = totalHeight + padding;
-
-                    ctx.fillStyle = '#ffffff'; 
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                    const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
-                        const words = (text || '').split(' ');
-                        let line = '';
-                        let tempY = y;
-                        for (let n = 0; n < words.length; n++) {
-                            const testLine = line + words[n] + ' ';
-                            const metrics = context.measureText(testLine);
-                            const testWidth = metrics.width;
-                            if (testWidth > maxWidth && n > 0) {
-                                context.fillText(line, x, tempY);
-                                line = words[n] + ' ';
-                                tempY += lineHeight;
-                            } else {
-                                line = testLine;
-                            }
-                        }
-                        context.fillText(line, x, tempY);
-                        return tempY + lineHeight;
-                    };
-
-                    let currentHeaderY = padding + 40;
-
-                    if (pageIndex === 0) {
-                        ctx.fillStyle = '#000000'; 
-                        ctx.font = 'bold 48px sans-serif';
-                        ctx.fillText(projectName || 'Project Title', padding, currentHeaderY);
-                        
-                        currentHeaderY += 60;
-                        ctx.fillStyle = '#333333'; 
-                        ctx.font = 'bold 36px sans-serif';
-                        ctx.fillText(sceneTitle, padding, currentHeaderY);
-                        
-                        currentHeaderY += 40;
-                        ctx.fillStyle = '#555555';
-                        ctx.font = 'italic 24px sans-serif';
-                        currentHeaderY = wrapText(ctx, scene.description || '', padding, currentHeaderY, boardWidth - (padding * 2), 32);
-
-                        currentHeaderY += 20;
-
-                        if (sceneCharactersArray.length > 0) {
-                            ctx.fillStyle = '#111111';
-                            ctx.font = 'bold 24px sans-serif';
-                            ctx.fillText('Scene Cast:', padding, currentHeaderY);
-                            
-                            ctx.fillStyle = '#444444';
-                            ctx.font = '24px sans-serif';
-                            const castNames = sceneCharactersArray.map(c => c.name).join(' | ');
-                            ctx.fillText(castNames, padding + 150, currentHeaderY);
-                            currentHeaderY += 50;
-                        }
-
-                        ctx.fillStyle = '#f4f4f5'; 
-                        ctx.fillRect(padding, currentHeaderY, boardWidth - (padding * 2), 120);
-                        ctx.strokeStyle = '#e4e4e7';
-                        ctx.strokeRect(padding, currentHeaderY, boardWidth - (padding * 2), 120);
-                        
-                        ctx.fillStyle = '#111111';
-                        ctx.font = 'bold 20px sans-serif';
-                        ctx.fillText('GLOBAL SCENE STYLES:', padding + 20, currentHeaderY + 35);
-                        
-                        ctx.font = '20px sans-serif';
-                        ctx.fillStyle = '#333333';
-                        const colWidth = (boardWidth - (padding * 2) - 40) / 4;
-                        ctx.fillText(`Style: ${selectedStyle}`, padding + 20, currentHeaderY + 75);
-                        ctx.fillText(`Tone: ${selectedTone}`, padding + 20 + colWidth, currentHeaderY + 75);
-                        ctx.fillText(`Palette: ${selectedPalette}`, padding + 20 + (colWidth * 2), currentHeaderY + 75);
-                        ctx.fillText(`Aspect Ratio: ${aspectRatio}`, padding + 20 + (colWidth * 3), currentHeaderY + 75);
-                        
-                        currentHeaderY += 150;
-
-                        if (sceneLocations.length > 0) {
-                            ctx.fillStyle = '#111111';
-                            ctx.font = 'bold 24px sans-serif';
-                            ctx.fillText('Locations:', padding, currentHeaderY);
-                            
-                            let locX = padding;
-                            let maxLocHeight = 0;
-                            const locImgWidth = 250;
-                            
-                            currentHeaderY += 30;
-
-                            sceneLocations.forEach((loc, idx) => {
-                                if (locX + locImgWidth > boardWidth - padding) {
-                                    locX = padding;
-                                    currentHeaderY += maxLocHeight + 30;
-                                    maxLocHeight = 0;
-                                }
-
-                                ctx.fillStyle = '#333333';
-                                ctx.font = 'bold 20px sans-serif';
-                                ctx.fillText(loc.name, locX, currentHeaderY);
-                                
-                                let imgOffset = 25;
-                                if (loadedImages[`loc-${loc.id}`]) {
-                                    const img = loadedImages[`loc-${loc.id}`];
-                                    const imgRatio = img.width / img.height;
-                                    const drawHeight = locImgWidth / imgRatio;
-                                    
-                                    ctx.drawImage(img, locX, currentHeaderY + imgOffset, locImgWidth, drawHeight);
-                                    ctx.strokeStyle = '#cccccc';
-                                    ctx.strokeRect(locX, currentHeaderY + imgOffset, locImgWidth, drawHeight);
-                                    
-                                    maxLocHeight = Math.max(maxLocHeight, drawHeight + 40);
-                                } else {
-                                    ctx.fillStyle = '#f4f4f5';
-                                    ctx.fillRect(locX, currentHeaderY + imgOffset, locImgWidth, 140);
-                                    ctx.fillStyle = '#888888';
-                                    ctx.font = '16px sans-serif';
-                                    ctx.fillText('[No Location Image]', locX + 45, currentHeaderY + imgOffset + 75);
-                                    maxLocHeight = Math.max(maxLocHeight, 180);
-                                }
-                                locX += locImgWidth + 30;
-                            });
-                            currentHeaderY += maxLocHeight + 40;
-                        }
-
-                        ctx.strokeStyle = '#dddddd'; 
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(padding, currentHeaderY);
-                        ctx.lineTo(boardWidth - padding, currentHeaderY);
-                        ctx.stroke();
-                        
-                    } else {
-                        ctx.fillStyle = '#555555';
-                        ctx.font = 'bold 24px sans-serif';
-                        ctx.fillText(`${sceneTitle} (Continued) - Page ${pageIndex + 1}`, padding, padding + 30);
-                        
-                        ctx.strokeStyle = '#dddddd'; 
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(padding, padding + 60);
-                        ctx.lineTo(boardWidth - padding, padding + 60);
-                        ctx.stroke();
-                    }
-
-                    let shotYOffset = pageIndex === 0 ? currentHeaderY + 40 : padding + 100;
-
-                    for (const layout of shotLayouts) {
-                        const { shot, charsInShot } = layout;
-                        const frameId = `${scene.id}-${shot.id}`;
-                        const yStart = shotYOffset;
-                        
-                        ctx.fillStyle = '#f8f8fa'; 
-                        ctx.fillRect(padding, yStart, shotImgWidth, layout.height);
-                        ctx.strokeStyle = '#cccccc'; 
-                        ctx.strokeRect(padding, yStart, shotImgWidth, layout.height);
-
-                        if (loadedImages[frameId]) {
-                            const img = loadedImages[frameId];
-                            const imgRatio = img.width / img.height;
-                            const drawHeight = shotImgWidth / imgRatio;
-                            const imgY = yStart + (layout.height - drawHeight) / 2;
-                            ctx.drawImage(img, padding, imgY, shotImgWidth, drawHeight);
-                        } else {
-                            ctx.fillStyle = '#888888';
-                            ctx.font = '24px sans-serif';
-                            ctx.fillText('[No Image Rendered]', padding + shotImgWidth/2 - 100, yStart + layout.height/2);
-                        }
-
-                        const textX = padding + shotImgWidth + 40;
-                        let currentTextY = yStart + 30;
-
-                        ctx.fillStyle = '#000000';
-                        ctx.font = 'bold 32px sans-serif';
-                        ctx.fillText(`Shot ${shot.order ?? shot.id}: ${shot.type || 'Standard'}`, textX, currentTextY);
-                        
-                        currentTextY += 45;
-
-                        ctx.fillStyle = '#555555';
-                        ctx.font = '20px sans-serif';
-                        
-                        const metaColWidth = textPanelWidth / 2;
-                        ctx.fillText(`Camera: ${shot.camera || 'Auto'}`, textX, currentTextY);
-                        ctx.fillText(`Lens: ${shot.lens || 'Auto'}`, textX + metaColWidth, currentTextY);
-                        currentTextY += 30;
-
-                        ctx.fillText(`Angle: ${shot.cameraAngle || 'Auto'}`, textX, currentTextY);
-                        ctx.fillText(`Movement: ${shot.cameraMovement || 'Auto'}`, textX + metaColWidth, currentTextY);
-                        currentTextY += 30;
-                        
-                        ctx.fillText(`Specialty: ${shot.specialtyShot || 'None'}`, textX, currentTextY);
-                        ctx.fillText(`Lighting: ${shot.lighting || 'Auto'}`, textX + metaColWidth, currentTextY);
-                        currentTextY += 30;
-                        
-                        const activeTimePdfProd = (shot.timeOfDay && shot.timeOfDay !== 'Unspecified') ? shot.timeOfDay : (selectedGlobalTime !== 'Unspecified' ? selectedGlobalTime : 'Auto');
-                        ctx.fillText(`Time: ${activeTimePdfProd}`, textX, currentTextY);
-                        currentTextY += 40;
-
-                        ctx.fillStyle = '#111111';
-                        ctx.font = 'bold 22px sans-serif';
-                        ctx.fillText(`Cast in Shot: ${charsInShot}`, textX, currentTextY);
-                        currentTextY += 45;
-
-                        if (shot.style || shot.tone || shot.palette) {
-                            ctx.fillStyle = '#b45309'; 
-                            ctx.font = 'italic 18px sans-serif';
-                            const overrides = [];
-                            if (shot.style) overrides.push(`Style: ${shot.style}`);
-                            if (shot.tone) overrides.push(`Tone: ${shot.tone}`);
-                            if (shot.palette) overrides.push(`Palette: ${shot.palette}`);
-                            ctx.fillText(`Overrides: ${overrides.join(' | ')}`, textX, currentTextY);
-                            currentTextY += 40;
-                        }
-
-                        if (shot.script_snippet) {
-                            ctx.fillStyle = '#666666';
-                            ctx.font = 'bold 16px sans-serif';
-                            ctx.fillText('SCRIPT:', textX, currentTextY);
-                            currentTextY += 25;
-                            
-                            ctx.fillStyle = '#222222';
-                            ctx.font = 'italic 24px sans-serif';
-                            currentTextY = wrapText(ctx, `"${shot.script_snippet}"`, textX, currentTextY, textPanelWidth, 36);
-                            currentTextY += 20;
-                        }
-
-                        ctx.fillStyle = '#666666';
-                        ctx.font = 'bold 16px sans-serif';
-                        ctx.fillText('VISUAL DESCRIPTION:', textX, currentTextY);
-                        currentTextY += 25;
-                        
-                        ctx.fillStyle = '#111111';
-                        ctx.font = '24px sans-serif';
-                        wrapText(ctx, shot.prompt || '', textX, currentTextY, textPanelWidth, 36);
-
-                        shotYOffset += layout.height + shotSpacing;
-                    }
-
-                    const boardData = canvas.toDataURL('image/jpeg', 0.90);
-                    const match = boardData.match(/data:image\/(.*?);base64,(.*)/);
-                    if (match) {
-                        const fileName = `Production_Board_Scene_${scene.id}_Pg${pageIndex + 1}.jpg`;
-                        zip.file(fileName, match[2], { base64: true });
-                        boardCount++;
-                    }
-                }
-            }
-
-            if (boardCount > 0) {
-                const content = await zip.generateAsync({ type: "blob" });
-                const url = URL.createObjectURL(content);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${projectName.replace(/[^a-z0-9]/gi, '_')}_Production_Boards.zip`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setAiStatus(`Exported ${boardCount} Production Board pages successfully!`);
-            } else {
-                setAiStatus('No content available to build boards.');
-            }
-
-        } catch (error) {
-            console.error("Production Board export error:", error);
-            setAiStatus('Failed to generate Production Boards. Check console.');
-        } finally {
-            setGeneratingIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete('exporting-production-boards');
-                return newSet;
-            });
-        }
-    };
-
-    const handleExportDirectorsBoard = async () => {
-        if (parsedScenes.length === 0) {
-            setAiStatus('No scenes to export.');
-            return;
-        }
-
-        setAiStatus('Generating Director\'s Board PDF with Asset Breakdowns...');
-        setGeneratingIds(prev => new Set(prev).add('exporting-directors-board'));
-
-        try {
-            if (!window.jspdf) {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
-            }
-
-            const { jsPDF } = window.jspdf;
-            let pdf = null;
-            const boardWidth = 1920;
-            const padding = 80;
-
-            for (const scene of parsedScenes) {
-                const sceneTitle = scene.title || `Scene ${scene.id}`;
-                
-                // Pre-load collage if available to measure height for visual context
-                let collageImg = null;
-                const collageData = generatedCollages[scene.id];
-                if (collageData) {
-                    const collageSrc = Array.isArray(collageData) ? collageData[0] : collageData;
-                    collageImg = new Image();
-                    collageImg.src = collageSrc;
-                    await new Promise(r => collageImg.onload = r);
-                }
-
-                // Pre-load Costume Board if available
-                let costumeImg = null;
-                if (generatedCostumeBoards[scene.id]) {
-                    costumeImg = new Image();
-                    costumeImg.src = generatedCostumeBoards[scene.id];
-                    await new Promise(r => costumeImg.onload = r);
-                }
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                const estimateTextHeight = (text, maxWidth, fontStr) => {
-                    const dummyCanvas = document.createElement('canvas');
-                    const dummyCtx = dummyCanvas.getContext('2d');
-                    dummyCtx.font = fontStr;
-                    const words = (text || '').split(' ');
-                    let lines = 1;
-                    let currentLine = '';
-                    for (let i = 0; i < words.length; i++) {
-                        const testLine = currentLine + words[i] + ' ';
-                        const metrics = dummyCtx.measureText(testLine);
-                        if (metrics.width > maxWidth && i > 0) {
-                            lines++;
-                            currentLine = words[i] + ' ';
-                        } else {
-                            currentLine = testLine;
-                        }
-                    }
-                    return lines * parseInt(fontStr.match(/\d+/)[0]) * 1.5;
-                };
-
-                const textWidth = boardWidth - (padding * 2);
-                
-                // Calculate Required Canvas Height
-                let totalHeight = padding;
-                totalHeight += 120; // Title + Project
-                totalHeight += estimateTextHeight(scene.description || '', textWidth, 'italic 24px sans-serif') + 60;
-                
-                totalHeight += 60; // Director Notes Header
-                totalHeight += estimateTextHeight(scene.directorNotes || 'No notes available.', textWidth, '24px sans-serif') + 80;
-                
-                totalHeight += 60; // Asset Breakdown Header
-                if (scene.propsBreakdown) {
-                    totalHeight += 180; // Approximate height for 4 asset lines
-                } else {
-                    totalHeight += 40;
-                }
-                totalHeight += 40;
-                
-                totalHeight += 60; // Critique Header
-                totalHeight += estimateTextHeight(scene.sequenceCritique || 'No critique available.', textWidth, '24px sans-serif') + 80;
-
-                let costumeHeight = 0;
-                if (costumeImg) {
-                    costumeHeight = (textWidth / costumeImg.width) * costumeImg.height;
-                    totalHeight += costumeHeight + 60;
-                }
-
-                let collageHeight = 0;
-                if (collageImg) {
-                    collageHeight = (textWidth / collageImg.width) * collageImg.height;
-                    totalHeight += collageHeight + 60;
-                }
-
-                totalHeight += padding;
-
-                // Setup Canvas Dimensions
-                canvas.width = boardWidth;
-                canvas.height = totalHeight;
-
-                // Draw Background
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
-                    const words = (text || '').split(' ');
-                    let line = '';
-                    let tempY = y;
-                    for (let n = 0; n < words.length; n++) {
-                        const testLine = line + words[n] + ' ';
-                        const metrics = context.measureText(testLine);
-                        if (metrics.width > maxWidth && n > 0) {
-                            context.fillText(line, x, tempY);
-                            line = words[n] + ' ';
-                            tempY += lineHeight;
-                        } else {
-                            line = testLine;
-                        }
-                    }
-                    context.fillText(line, x, tempY);
-                    return tempY + lineHeight;
-                };
-
-                let currentY = padding;
-                
-                // Draw Headers
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 36px sans-serif';
-                ctx.fillText(`${projectName || 'Project'} - Director's Board & Breakdowns`, padding, currentY);
-                currentY += 60;
-                
-                ctx.fillStyle = '#111111';
-                ctx.font = 'bold 48px sans-serif';
-                ctx.fillText(sceneTitle, padding, currentY);
-                currentY += 60;
-
-                ctx.fillStyle = '#444444';
-                ctx.font = 'italic 24px sans-serif';
-                currentY = wrapText(ctx, scene.description || 'No description.', padding, currentY, textWidth, 36);
-                currentY += 60;
-
-                // Draw Director Notes
-                ctx.fillStyle = '#059669'; // Emerald
-                ctx.font = 'bold 28px sans-serif';
-                ctx.fillText('DIRECTOR\'S TREATMENT / NOTES', padding, currentY);
-                currentY += 40;
-                ctx.fillStyle = '#222222';
-                ctx.font = '24px sans-serif';
-                currentY = wrapText(ctx, scene.directorNotes || 'No notes generated.', padding, currentY, textWidth, 36);
-                currentY += 60;
-
-                // Draw Asset Breakdown
-                ctx.fillStyle = '#2563eb'; // Blue
-                ctx.font = 'bold 28px sans-serif';
-                ctx.fillText('ASSET BREAKDOWN (PROPS, VFX, SFX, WARDROBE)', padding, currentY);
-                currentY += 40;
-                ctx.fillStyle = '#222222';
-                ctx.font = '24px sans-serif';
-                if (scene.propsBreakdown) {
-                    const props = scene.propsBreakdown.props?.join(', ') || 'None';
-                    const vfx = scene.propsBreakdown.vfx?.join(', ') || 'None';
-                    const sfx = scene.propsBreakdown.sfx?.join(', ') || 'None';
-                    const wardrobe = scene.propsBreakdown.wardrobe?.join(', ') || 'None';
-                    
-                    ctx.font = 'bold 24px sans-serif'; ctx.fillText('Props:', padding, currentY); ctx.font = '24px sans-serif'; currentY = wrapText(ctx, props, padding + 140, currentY, textWidth - 140, 36); currentY += 20;
-                    ctx.font = 'bold 24px sans-serif'; ctx.fillText('VFX:', padding, currentY); ctx.font = '24px sans-serif'; currentY = wrapText(ctx, vfx, padding + 140, currentY, textWidth - 140, 36); currentY += 20;
-                    ctx.font = 'bold 24px sans-serif'; ctx.fillText('SFX:', padding, currentY); ctx.font = '24px sans-serif'; currentY = wrapText(ctx, sfx, padding + 140, currentY, textWidth - 140, 36); currentY += 20;
-                    ctx.font = 'bold 24px sans-serif'; ctx.fillText('Wardrobe:', padding, currentY); ctx.font = '24px sans-serif'; currentY = wrapText(ctx, wardrobe, padding + 140, currentY, textWidth - 140, 36); currentY += 40;
-                } else {
-                    currentY = wrapText(ctx, 'No asset breakdown generated.', padding, currentY, textWidth, 36);
-                    currentY += 40;
-                }
-
-                // Draw Sequence Critique
-                ctx.fillStyle = '#d97706'; // Amber
-                ctx.font = 'bold 28px sans-serif';
-                ctx.fillText('SEQUENCE CRITIQUE', padding, currentY);
-                currentY += 40;
-                ctx.fillStyle = '#222222';
-                ctx.font = '24px sans-serif';
-                currentY = wrapText(ctx, scene.sequenceCritique || 'No critique generated.', padding, currentY, textWidth, 36);
-                currentY += 60;
-
-                // Draw Costume Board if it exists
-                if (costumeImg) {
-                    ctx.fillStyle = '#9333ea'; // Purple
-                    ctx.font = 'bold 28px sans-serif';
-                    ctx.fillText('WARDROBE & PROPS CHART', padding, currentY);
-                    currentY += 40;
-
-                    ctx.drawImage(costumeImg, padding, currentY, textWidth, costumeHeight);
-                    ctx.strokeStyle = '#cccccc';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(padding, currentY, textWidth, costumeHeight);
-                    currentY += costumeHeight + 60;
-                }
-
-                // Draw Scene Visual Collage if it exists
-                if (collageImg) {
-                    ctx.fillStyle = '#10b981'; // Emerald
-                    ctx.font = 'bold 28px sans-serif';
-                    ctx.fillText('STORYBOARD PRE-VIZ GRID', padding, currentY);
-                    currentY += 40;
-
-                    ctx.drawImage(collageImg, padding, currentY, textWidth, collageHeight);
-                    ctx.strokeStyle = '#cccccc';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(padding, currentY, textWidth, collageHeight);
-                }
-
-                // Add to PDF
-                const canvasData = canvas.toDataURL('image/jpeg', 0.95);
-                const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
-
-                if (!pdf) {
-                    pdf = new jsPDF({ orientation: orientation, unit: 'px', format: [canvas.width, canvas.height] });
-                } else {
-                    pdf.addPage([canvas.width, canvas.height], orientation);
-                }
-                pdf.addImage(canvasData, 'JPEG', 0, 0, canvas.width, canvas.height);
-            }
-
-            if (pdf) {
-                pdf.save(`${projectName.replace(/[^a-z0-9]/gi, '_')}_Directors_Board.pdf`);
-                setAiStatus('Director\'s Board PDF exported successfully!');
-            } else {
-                setAiStatus('No content available to export.');
-            }
-
-        } catch (err) {
-            console.error("Director's Board Export failed:", err);
-            setAiStatus('Failed to generate Director\'s Board. Check console.');
-        } finally {
-            setGeneratingIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete('exporting-directors-board');
-                return newSet;
-            });
-        }
-    };
-
-    const handleExportCinematographersBoard = async () => {
-        if (parsedScenes.length === 0) {
-            setAiStatus('No scenes to export.');
-            return;
-        }
-
-        setAiStatus('Generating Cinematographer\'s Board PDF...');
-        setGeneratingIds(prev => new Set(prev).add('exporting-cinematographer-board'));
-
-        try {
-            if (!window.jspdf) {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
-            }
-
-            const { jsPDF } = window.jspdf;
-            let pdf = null;
-            const boardWidth = 1920;
-            const padding = 80;
-
-            for (const scene of parsedScenes) {
-                const sceneTitle = scene.title || `Scene ${scene.id}`;
-                const safeShots = Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {});
-                const sortedShots = [...safeShots].sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
-
-                if (sortedShots.length === 0) continue;
-
-                for (const shot of sortedShots) {
-                    const frameId = `${scene.id}-${shot.id}`;
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    let shotImg = null;
-                    if (generatedImages[frameId]) {
-                        shotImg = new Image();
-                        shotImg.src = generatedImages[frameId];
-                        await new Promise(r => shotImg.onload = r);
-                    }
-
-                    let breakdownImg = null;
-                    if (generatedBreakdowns[frameId]) {
-                        breakdownImg = new Image();
-                        breakdownImg.src = generatedBreakdowns[frameId];
-                        await new Promise(r => breakdownImg.onload = r);
-                    }
-
-                    let totalHeight = padding * 2;
-                    totalHeight += 120; // Header height
-
-                    let shotHeight = 0;
-                    if (shotImg) {
-                        shotHeight = (boardWidth - padding * 2) * (shotImg.height / shotImg.width);
-                        totalHeight += shotHeight + 60;
-                    }
-
-                    totalHeight += 180; // Metadata text space
-
-                    const diagramsHeight = 500;
-                    totalHeight += diagramsHeight + 60;
-
-                    let breakdownHeight = 0;
-                    if (breakdownImg) {
-                        breakdownHeight = (boardWidth - padding * 2) * (breakdownImg.height / breakdownImg.width);
-                        totalHeight += breakdownHeight + 60;
-                    }
-
-                    canvas.width = boardWidth;
-                    canvas.height = totalHeight;
-
-                    // DP Board uses a sleek dark theme
-                    ctx.fillStyle = '#0a0a0a'; 
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                    let currentY = padding;
-
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 36px sans-serif';
-                    ctx.fillText(`${projectName || 'Project'} - Cinematographer's Board`, padding, currentY);
-                    currentY += 50;
-
-                    ctx.fillStyle = '#a1a1aa';
-                    ctx.font = '28px sans-serif';
-                    ctx.fillText(`${sceneTitle} | Shot ${shot.order ?? shot.id} - ${shot.type}`, padding, currentY);
-                    currentY += 60;
-
-                    if (shotImg) {
-                        ctx.drawImage(shotImg, padding, currentY, boardWidth - padding * 2, shotHeight);
-                        ctx.strokeStyle = '#27272a';
-                        ctx.lineWidth = 4;
-                        ctx.strokeRect(padding, currentY, boardWidth - padding * 2, shotHeight);
-                        currentY += shotHeight + 50;
-                    }
-
-                    // Metadata Overlay blocks
-                    ctx.fillStyle = '#10b981'; // Emerald accents for optics
-                    ctx.font = 'bold 24px monospace';
-                    ctx.fillText(`CAMERA: ${shot.camera || 'Auto'}`, padding, currentY);
-                    ctx.fillText(`LENS: ${shot.lens || 'Auto'}`, padding + 450, currentY);
-                    ctx.fillText(`LIGHTING: ${shot.lighting || 'Auto'}`, padding + 900, currentY);
-                    currentY += 40;
-
-                    ctx.fillStyle = '#3b82f6'; // Blue accents for movement
-                    ctx.fillText(`ANGLE: ${shot.cameraAngle || 'Auto'}`, padding, currentY);
-                    ctx.fillText(`MOVEMENT: ${shot.cameraMovement || 'Auto'}`, padding + 450, currentY);
-                    ctx.fillText(`SPECIALTY: ${shot.specialtyShot || 'None'}`, padding + 900, currentY);
-                    currentY += 60;
-
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 28px sans-serif';
-                    ctx.fillText('SPATIAL DIAGRAMS (AUTO-GENERATED)', padding, currentY);
-                    currentY += 40;
-
-                    const diagramWidth = (boardWidth - padding * 2 - 40) / 2;
-                    
-                    const drawGridBg = (x, y, w, h) => {
-                        ctx.fillStyle = '#0f0f11';
-                        ctx.fillRect(x, y, w, h);
-                        ctx.strokeStyle = '#1f1f23';
-                        ctx.lineWidth = 1;
-                        for (let i=0; i<w; i+=40) { ctx.beginPath(); ctx.moveTo(x+i, y); ctx.lineTo(x+i, y+h); ctx.stroke(); }
-                        for (let i=0; i<h; i+=40) { ctx.beginPath(); ctx.moveTo(x, y+i); ctx.lineTo(x+w, y+i); ctx.stroke(); }
-                    };
-
-                    // Extract logical rules from shot data
-                    let focalLength = 35;
-                    const lensMatch = (shot.lens || '').match(/(\d+)mm/);
-                    if (lensMatch) focalLength = parseInt(lensMatch[1]);
-                    const fovDegrees = 2 * Math.atan(24.89 / (2 * focalLength)) * (180 / Math.PI); // Super35 approx
-                    const fovRad = fovDegrees * (Math.PI / 180);
-
-                    let distanceFactor = 0.5;
-                    const typeLower = (shot.type || '').toLowerCase();
-                    if (typeLower.includes('extreme wide') || typeLower.includes('ews')) distanceFactor = 0.9;
-                    else if (typeLower.includes('wide') || typeLower.includes('ws') || typeLower.includes('full')) distanceFactor = 0.7;
-                    else if (typeLower.includes('medium')) distanceFactor = 0.5;
-                    else if (typeLower.includes('close-up') && !typeLower.includes('extreme')) distanceFactor = 0.3;
-                    else if (typeLower.includes('extreme close') || typeLower.includes('ecu') || typeLower.includes('macro')) distanceFactor = 0.15;
-
-                    const angleLower = (shot.cameraAngle || '').toLowerCase();
-                    let camHeight = 0.5;
-                    let camPitch = 0;
-                    if (angleLower.includes('low') || angleLower.includes('knee') || angleLower.includes('hip')) {
-                        camHeight = 0.2; camPitch = 15;
-                    } else if (angleLower.includes('worm') || angleLower.includes('ground')) {
-                        camHeight = 0.05; camPitch = 30;
-                    } else if (angleLower.includes('high') || angleLower.includes('shoulder')) {
-                        camHeight = 1.0; camPitch = -20;
-                    } else if (angleLower.includes('bird') || angleLower.includes('top')) {
-                        camHeight = 1.5; camPitch = -80;
-                    } else {
-                        camHeight = 0.7; camPitch = 0;
-                    }
-
-                    // DRAW TOP VIEW
-                    const tX = padding;
-                    const tY = currentY;
-                    const tW = diagramWidth;
-                    const tH = diagramsHeight;
-                    drawGridBg(tX, tY, tW, tH);
-                    
-                    ctx.fillStyle = '#a1a1aa';
-                    ctx.font = 'bold 20px monospace';
-                    ctx.fillText(`TOP VIEW (EST. FOV: ${Math.round(fovDegrees)}°)`, tX + 20, tY + 40);
-
-                    const subX = tX + tW * 0.75;
-                    const subY = tY + tH / 2;
-                    const actualDist = (tW * 0.5) * distanceFactor + 60;
-                    const camX = subX - actualDist;
-                    const camY = subY;
-
-                    ctx.fillStyle = 'rgba(16, 185, 129, 0.15)'; // Emerald view cone
-                    ctx.beginPath();
-                    ctx.moveTo(camX, camY);
-                    ctx.lineTo(camX + tW * Math.cos(-fovRad/2), camY + tW * Math.sin(-fovRad/2));
-                    ctx.lineTo(camX + tW * Math.cos(fovRad/2), camY + tW * Math.sin(fovRad/2));
-                    ctx.fill();
-
-                    ctx.fillStyle = '#ef4444'; // Red Subject
-                    ctx.beginPath(); ctx.arc(subX, subY, 16, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.fillText('Subject', subX - 30, subY + 45);
-
-                    ctx.fillStyle = '#10b981'; // Camera
-                    ctx.fillRect(camX - 16, camY - 12, 24, 24);
-                    ctx.beginPath(); ctx.moveTo(camX + 8, camY - 8); ctx.lineTo(camX + 20, camY - 14); ctx.lineTo(camX + 20, camY + 14); ctx.lineTo(camX + 8, camY + 8); ctx.fill();
-                    ctx.fillStyle = '#fff'; ctx.fillText('Camera', camX - 30, camY + 45);
-                    
-                    ctx.strokeStyle = '#27272a'; ctx.lineWidth = 4; ctx.strokeRect(tX, tY, tW, tH);
-
-                    // DRAW SIDE VIEW
-                    const sX = padding + diagramWidth + 40;
-                    const sY = currentY;
-                    const sW = diagramWidth;
-                    const sH = diagramsHeight;
-                    drawGridBg(sX, sY, sW, sH);
-                    
-                    ctx.fillStyle = '#a1a1aa';
-                    ctx.font = 'bold 20px monospace';
-                    ctx.fillText(`SIDE VIEW (PITCH: ${camPitch}°)`, sX + 20, sY + 40);
-
-                    const groundY = sY + sH - 60;
-                    ctx.strokeStyle = '#3f3f46'; ctx.lineWidth = 4;
-                    ctx.beginPath(); ctx.moveTo(sX, groundY); ctx.lineTo(sX + sW, groundY); ctx.stroke();
-
-                    const sSubX = sX + sW * 0.75;
-                    const subH = sH * 0.45;
-                    
-                    // Stick figure subject
-                    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 4;
-                    ctx.beginPath(); ctx.moveTo(sSubX, groundY - subH); ctx.lineTo(sSubX, groundY - subH*0.4); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(sSubX, groundY - subH*0.4); ctx.lineTo(sSubX - 15, groundY); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(sSubX, groundY - subH*0.4); ctx.lineTo(sSubX + 15, groundY); ctx.stroke();
-                    ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(sSubX, groundY - subH - 12, 12, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.fillText('Subject', sSubX - 30, groundY + 30);
-
-                    let sCamDist = (sW * 0.5) * distanceFactor + 60;
-                    if (angleLower.includes('bird') || angleLower.includes('top')) sCamDist = 30; // Closer X distance if straight down
-                    
-                    const sCamX = sSubX - sCamDist;
-                    const sCamY = groundY - (subH * camHeight) - 20;
-                    const pitchRad = -camPitch * (Math.PI / 180);
-                    const vFovRad = fovRad * 0.6; // Vertical FOV approximation
-
-                    // Pitch view cone
-                    ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
-                    ctx.beginPath();
-                    ctx.moveTo(sCamX, sCamY);
-                    ctx.lineTo(sCamX + sW * Math.cos(pitchRad - vFovRad/2), sCamY + sW * Math.sin(pitchRad - vFovRad/2));
-                    ctx.lineTo(sCamX + sW * Math.cos(pitchRad + vFovRad/2), sCamY + sW * Math.sin(pitchRad + vFovRad/2));
-                    ctx.fill();
-
-                    // Line of sight ray
-                    ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)'; ctx.lineWidth = 2; ctx.setLineDash([8, 8]);
-                    ctx.beginPath(); ctx.moveTo(sCamX, sCamY); ctx.lineTo(sCamX + sW * Math.cos(pitchRad), sCamY + sW * Math.sin(pitchRad)); ctx.stroke(); ctx.setLineDash([]);
-
-                    // Camera Icon (rotated to match pitch)
-                    ctx.save();
-                    ctx.translate(sCamX, sCamY);
-                    ctx.rotate(pitchRad);
-                    ctx.fillStyle = '#10b981';
-                    ctx.fillRect(-12, -12, 24, 24);
-                    ctx.beginPath(); ctx.moveTo(12, -8); ctx.lineTo(22, -14); ctx.lineTo(22, 14); ctx.lineTo(12, 8); ctx.fill();
-                    ctx.restore();
-                    
-                    ctx.fillStyle = '#fff'; ctx.fillText('Camera', sCamX - 35, sCamY - 35);
-                    ctx.strokeStyle = '#27272a'; ctx.lineWidth = 4; ctx.strokeRect(sX, sY, sW, sH);
-
-                    currentY += diagramsHeight + 60;
-
-                    if (breakdownImg) {
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 28px sans-serif';
-                        ctx.fillText('TECHNICAL BREAKDOWN / LIGHTING PLOT', padding, currentY);
-                        currentY += 40;
-
-                        ctx.drawImage(breakdownImg, padding, currentY, boardWidth - padding * 2, breakdownHeight);
-                        ctx.strokeStyle = '#27272a';
-                        ctx.strokeRect(padding, currentY, boardWidth - padding * 2, breakdownHeight);
-                    }
-
-                    const canvasData = canvas.toDataURL('image/jpeg', 0.90);
-                    const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
-
-                    if (!pdf) {
-                        pdf = new jsPDF({ orientation: orientation, unit: 'px', format: [canvas.width, canvas.height] });
-                    } else {
-                        pdf.addPage([canvas.width, canvas.height], orientation);
-                    }
-                    pdf.addImage(canvasData, 'JPEG', 0, 0, canvas.width, canvas.height);
-                }
-            }
-
-            if (pdf) {
-                pdf.save(`${projectName.replace(/[^a-z0-9]/gi, '_')}_Cinematographers_Board.pdf`);
-                setAiStatus('Cinematographer\'s Board PDF exported successfully!');
-            } else {
-                setAiStatus('No content available to export.');
-            }
-
-        } catch (err) {
-            console.error("Cinematographer's Board Export failed:", err);
-            setAiStatus('Failed to generate Cinematographer\'s Board. Check console.');
-        } finally {
-            setGeneratingIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete('exporting-cinematographer-board');
-                return newSet;
-            });
-        }
-    };
-
-    const handleImageUpload = (e) => {
+    const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
+            setAiStatus("Scanning image for known faces...");
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setNewCharImage({ url: reader.result, data: reader.result.split(',')[1], mimeType: file.type });
+            reader.onloadend = async () => {
+                const url = reader.result;
+                const data = reader.result.split(',')[1];
+                const mimeType = file.type;
+                const imgObj = { url, data, mimeType };
+                
+                const idResult = await identifyActorFromImage(data, mimeType);
+                if (idResult && idResult.recognized) {
+                    setPendingActorMatch({ targetType: 'new', currentName: newCharName, imageDatas: [imgObj], detectedInfo: idResult });
+                    setAiStatus("Face recognized! Waiting for confirmation.");
+                } else {
+                    setNewCharImage(imgObj);
+                    setAiStatus("Image uploaded.");
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -3164,21 +2290,43 @@ Each result MUST be an object with this exact structure:
     const updateLocationDescription = (id, desc) => setLocations((prev) => prev.map((l) => l.id === id ? { ...l, description: desc } : l));
     const updateCharacterInfo = (id, field, value) => setCharacters((prev) => prev.map((c) => c.id === id ? { ...c, [field]: value } : c));
 
-    const handleUpdateCharacterImage = (id, e) => {
+    const handleUpdateCharacterImage = async (id, e) => {
         const files = Array.from(e.target.files);
         if (files.length > 0) {
-            files.forEach(file => {
+            setAiStatus("Scanning image for known faces...");
+            
+            const imageDatas = await Promise.all(files.map(file => new Promise((resolve) => {
                 const reader = new FileReader();
-                reader.onloadend = () => {
-                    setCharacters((prev) => prev.map((c) => {
-                        if (c.id === id) {
-                            return { ...c, images: [...(c.images || []), { url: reader.result, data: reader.result.split(',')[1], mimeType: file.type }] };
-                        }
-                        return c;
-                    }));
-                };
+                reader.onloadend = () => resolve({
+                    url: reader.result,
+                    data: reader.result.split(',')[1],
+                    mimeType: file.type
+                });
                 reader.readAsDataURL(file);
-            });
+            })));
+            
+            const firstImg = imageDatas[0];
+            const idResult = await identifyActorFromImage(firstImg.data, firstImg.mimeType);
+            
+            if (idResult && idResult.recognized) {
+                const char = characters.find(c => c.id === id);
+                setPendingActorMatch({ 
+                    targetType: 'existing', 
+                    charId: id, 
+                    currentName: char ? char.name : '',
+                    imageDatas: imageDatas, 
+                    detectedInfo: idResult 
+                });
+                setAiStatus("Face recognized! Waiting for confirmation.");
+            } else {
+                setCharacters((prev) => prev.map((c) => {
+                    if (c.id === id) {
+                        return { ...c, images: [...(c.images || []), ...imageDatas] };
+                    }
+                    return c;
+                }));
+                setAiStatus("Image uploaded.");
+            }
         }
     };
 
@@ -3248,11 +2396,17 @@ Each result MUST be an object with this exact structure:
                 promptAddon += `. Key visual traits and clothing: ${description}`;
             }
             const payload = {
-                instances: [{ prompt: `Create a clear, 4K Ultra HD, extremely high-quality, front-facing studio portrait headshot of a cinematic movie character named ${name}${promptAddon}. Masterpiece, hyper-detailed, sharp focus, professional lighting, neutral dark background, photorealistic concept art. They must look like a real actor. No text. (Aspect Ratio: 1:1)` }],
-                parameters: { sampleCount: 1, aspectRatio: "1:1" }
+                contents: [{
+                    role: 'user',
+                    parts: [{ text: `Create a clear, 4K Ultra HD, extremely high-quality, front-facing studio portrait headshot of a cinematic movie character named ${name}${promptAddon}. Masterpiece, hyper-detailed, sharp focus, professional lighting, neutral dark background, photorealistic concept art. They must look like a real actor. No text.` }]
+                }],
+                generationConfig: {
+                    responseModalities: ['IMAGE'],
+                    imageConfig: { aspectRatio: "1:1" }
+                }
             };
             
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
@@ -3263,10 +2417,11 @@ Each result MUST be an object with this exact structure:
             }
 
             const result = await response.json();
-            const data = result?.predictions?.[0]?.bytesBase64Encoded;
+            const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
 
-            if (data) {
-                const mimeType = 'image/png';
+            if (part && part.inlineData) {
+                const mimeType = part.inlineData.mimeType;
+                const data = part.inlineData.data;
                 const url = `data:${mimeType};base64,${data}`;
                 setCharacters((prev) => prev.map((c) => c.id === id ? { ...c, images: [...(c.images || []), { url, data, mimeType }] } : c));
                 setAiStatus(`Character design generated for ${name}!`);
@@ -3283,21 +2438,28 @@ Each result MUST be an object with this exact structure:
         try {
             const apiAspectRatio = ['1:1', '9:16', '16:9', '3:4', '4:3'].includes(aspectRatio) ? aspectRatio : '16:9';
             const payload = {
-                instances: [{ prompt: `Create a 4K Ultra HD, extremely high-quality, hyper-detailed cinematic establishing background shot of an empty location. Name: ${name}. Description: ${description || 'Empty environment'}. NO CHARACTERS. NO PEOPLE. Empty environment only. Global Style: ${selectedStyle}. Tone: ${selectedTone}. Palette: ${selectedPalette}. Masterpiece, sharp focus, professional cinematography. Aspect Ratio: ${aspectRatio}.` }],
-                parameters: { sampleCount: 1, aspectRatio: apiAspectRatio }
+                contents: [{
+                    role: 'user',
+                    parts: [{ text: `Create a 4K Ultra HD, extremely high-quality, hyper-detailed cinematic establishing background shot of an empty location. Name: ${name}. Description: ${description || 'Empty environment'}. NO CHARACTERS. NO PEOPLE. Empty environment only. Global Style: ${selectedStyle}. Tone: ${selectedTone}. Palette: ${selectedPalette}. Masterpiece, sharp focus, professional cinematography.` }]
+                }],
+                generationConfig: {
+                    responseModalities: ['IMAGE'],
+                    imageConfig: { aspectRatio: apiAspectRatio }
+                }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
             if (!response.ok) throw new Error("API error");
 
             const result = await response.json();
-            const data = result?.predictions?.[0]?.bytesBase64Encoded;
+            const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
 
-            if (data) {
-                const mimeType = 'image/png';
+            if (part && part.inlineData) {
+                const mimeType = part.inlineData.mimeType;
+                const data = part.inlineData.data;
                 const url = `data:${mimeType};base64,${data}`;
                 setLocations((prev) => prev.map((l) => l.id === id ? { ...l, image: { url, data, mimeType } } : l));
                 setAiStatus(`Empty location generated for ${name}!`);
@@ -3338,7 +2500,7 @@ Each result MUST be an object with this exact structure:
                 }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
@@ -3398,31 +2560,22 @@ Each result MUST be an object with this exact structure:
             let allCharacters = new Map();
             let allLocations = new Map();
             let globalSceneId = parsedScenesRef.current.length > 0 ? Math.max(...parsedScenesRef.current.map(s => s.id)) + 1 : 1;
-            let haltedWithError = false;
 
             for (let i = 0; i < chunks.length; i++) {
                 setAiStatus(`Extracting scenes (Part ${i + 1} of ${chunks.length})...`);
                 
-                const systemInstruction = `You are a master screenwriter, seasoned script doctor, and expert story editor. Natively read and analyze the provided text, which can be of various structural formats, including:
-- A formal standard screenplay
-- A prose-based short story or novel excerpt
-- A high-level synopsis or narrative beat-sheet
-- A conversational dialogue-only transcript or stage play
-
-Your absolute goal is to act with deep dramatic intuition to understand the scenario, characters, and events, and break the text down into distinct, logical, chronological visual scenes.
+                const systemInstruction = `You are a master screenwriter and expert story editor. Read and analyze the provided screenplay or story text. Use your deep narrative intelligence to natively understand the script and break it down into distinct, logical scenes.
 
 LANGUAGE STRATEGY: ${scriptLanguage}.
 
-CRITICAL SCREENWRITING INSTRUCTIONS:
-1. ADAPTIVE SCENE DELINEATION: Do not wait for, or limit yourself to, formal scene headings (like "INT. ROOM - DAY"). 
-   - If Standard Screenplay: Separate logically by scene headings (sluglines).
-   - If Prose/Story: Track shifts in location, chronological time, or major plot actions, and split them into distinct visual scenes.
-   - If Synopsis/Beat-Sheet: Treat each core narrative beat, event, or paragraph as a distinct scene.
-   - If Dialogue Transcript: Group logical exchanges occurring in the same setting into distinct scenes.
-2. DYNAMIC SCENE SLUGLINES: Even if the input text completely lacks standard screenplay headings, you MUST creatively synthesize a formal, professional screenwriter slugline (e.g., "INT. CREATIVE STUDIO - DAY" or "EXT. DUNDEE STREET - NIGHT") as the "title" of each extracted scene. Deduce the location and time of day from the context.
-3. COMPLETE TEXT RETENTION: For the "description" field of each scene, output the EXACT, UNEDITED original text belonging to that scene. Do not summarize, edit, or remove any dialogue or action. THIS TEXT MUST BE WRITTEN IN THE LANGUAGE SPECIFIED BY THE LANGUAGE STRATEGY. If 'Auto-Detect', KEEP IT IN ITS ORIGINAL NATIVE LANGUAGE.
-4. CAST DEDUCTION: Delineate all characters physically present or actively speaking in the scene as strings (All names must be written in English).
-5. LOCATIONS: Extract all distinct locations mentioned or clearly implied in each scene context.
+CRITICAL INSTRUCTIONS FOR AI SCREENWRITER:
+1. INTELLIGENT SCENE DELINEATION: Identify scene boundaries natively. Look for explicit scene headings (e.g., INT/EXT), but if they are missing, poorly formatted, or the text is prose, use your screenwriter intuition to detect shifts in location, time, or major narrative beats to separate scenes logically.
+2. COMPLETE COVERAGE: You must extract EVERY SINGLE PART of the text. Do not skip, drop, or summarize any dialogue or action. 
+3. SCENE DESCRIPTION (CRITICAL): For the "description" field, provide the EXACT, COMPLETE original text that belongs to that scene. DO NOT summarize, edit, cut, or remove any content. THIS TEXT MUST BE WRITTEN IN THE LANGUAGE SPECIFIED BY THE LANGUAGE STRATEGY. If 'Auto-Detect', DO NOT TRANSLATE IT, keep it exactly in the native script language.
+4. SCENE TITLE: Use the exact explicit scene heading as the title. If none exists, invent a professional, concise screenwriter-style slugline (e.g., "INT. KITCHEN - DAY" or "STREET CHASE") that accurately reflects the scene's setting and time based on your understanding of the text.
+5. CHARACTERS IN SCENE: For each scene, deduce and list all characters that are physically present or actively speaking as simple strings. ALL CHARACTER NAMES MUST BE TRANSLATED TO AND WRITTEN IN ENGLISH.
+6. LOCATIONS: List all distinct locations mentioned or implied in the text as strings.
+7. NO HALLUCINATIONS (STRICT): Do NOT invent, hallucinate, or add any story elements, actions, props, or dialogue that are not present in the provided text. Stick strictly to the source material.
 
 Output STRICTLY a valid JSON object matching this schema:
 {
@@ -3450,7 +2603,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
                     generationConfig: { responseMimeType: "application/json" }
                 };
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+                const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
 
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 
@@ -3459,7 +2612,6 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
                     console.error(`API Error on chunk ${i+1}:`, errorData);
                     setAlertMessage(`API Error: ${errorData.error?.message || response.statusText}. Please ensure you have pasted a valid Gemini API Key from Google AI Studio.`);
                     setAiStatus('Extraction halted due to invalid API Key.');
-                    haltedWithError = true;
                     break;
                 }
 
@@ -3526,7 +2678,6 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
                     } catch (e) {
                         console.error(`JSON Parse Error on chunk ${i+1}:`, e);
                         setAlertMessage(`Failed to parse AI response: ${e.message}`);
-                        haltedWithError = true;
                     }
                 }
             }
@@ -3568,30 +2719,31 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
                 setSelectedScene(allScenes[0].id);
                 if (allCharacters.size > 0) {
                     setCharacters(prev => {
-                        const existingNames = new Set(prev.map(c => c.name.trim().toLowerCase()));
-                        const newChars = [];
-                        let idx = 0;
-                        Array.from(allCharacters.values()).forEach(charData => {
-                            const lowerName = charData.name.toLowerCase();
-                            if (charData.name && !existingNames.has(lowerName)) {
-                                existingNames.add(lowerName);
-                                newChars.push({ 
-                                    id: Date.now() + 1000 + idx++, 
-                                    name: charData.name, 
-                                    gender: charData.gender || '', 
-                                    age: charData.age || '', 
-                                    description: charData.description || '', 
-                                    images: [] 
-                                });
-                            }
-                        });
-                        return [...prev, ...newChars];
+                    const existingNames = new Set(prev.map(c => c.name.trim().toLowerCase()));
+                    const newChars = [];
+                    let idx = 0;
+                    Array.from(allCharacters.values()).forEach(charData => {
+                        const lowerName = charData.name.toLowerCase();
+                        if (charData.name && !existingNames.has(lowerName)) {
+                            existingNames.add(lowerName);
+                            newChars.push({ 
+                                id: Date.now() + 1000 + idx++, 
+                                name: charData.name, 
+                                gender: charData.gender || '', 
+                                age: charData.age || '', 
+                                description: charData.description || '', 
+                                images: [] 
+                            });
+                        }
                     });
-                }
-                setAiStatus(`Extracted ${allScenes.length} scenes, ${allCharacters.size} characters, and ${allLocations.size} locations total!`);
-            } else if (!haltedWithError) { 
-                setAiStatus('No scenes could be generated from the text.'); 
-                setAlertMessage('No scenes were extracted. Please ensure your script contains standard formal scene headings (e.g., "INT. ROOM - DAY") or check if the API key is valid.');
+                    return [...prev, ...newChars];
+                });
+            }
+            setAiStatus(`Extracted ${allScenes.length} scenes, ${allCharacters.size} characters, and ${allLocations.size} locations total!`);
+            setActiveTab('assets');
+        } else { 
+            setAiStatus('No scenes could be generated from the text.'); 
+            setAlertMessage('No scenes were extracted. Please ensure your script contains standard formal scene headings (e.g., "INT. ROOM - DAY") or check if the API key is valid.');
             }
         } catch (error) { 
             console.error("Extraction error:", error);
@@ -3624,7 +2776,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
                 }
             };
             
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) throw new Error("API error");
@@ -3646,43 +2798,6 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
         }
     };
 
-    const generateSequenceCritique = async (sceneId) => {
-        const scene = parsedScenesRef.current.find(s => s.id === sceneId);
-        if (!scene || !scene.shots || scene.shots.length === 0) return;
-        
-        setAiStatus(`Analyzing visual rhythm for Scene ${sceneId}...`);
-        setGeneratingIds(prev => new Set(prev).add(`critique-${sceneId}`));
-        
-        try {
-            const shotDescriptions = scene.shots.map(s => `Shot ${s.order ?? s.id}: ${s.type}, ${s.cameraAngle}, ${s.cameraMovement} - ${s.prompt}`).join('\n');
-            const systemInstruction = `You are a master cinematographer. Critique the visual rhythm, continuity, and emotional impact of this sequence of shots. Identify any pacing issues, jarring cuts, or missed opportunities. Keep it concise, actionable, and under 150 words.`;
-            
-            const payload = {
-                contents: [{ role: 'user', parts: [{ text: "Scene description:\n" + scene.description + "\n\nShot Sequence:\n" + shotDescriptions }] }],
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-            };
-            
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-            
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error("API error");
-            
-            const result = await response.json();
-            if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-                const notes = result.candidates[0].content.parts[0].text;
-                updateSceneDetails(sceneId, 'sequenceCritique', notes);
-                setAiStatus(`Critique generated for Scene ${sceneId}.`);
-            } else {
-                throw new Error("No text returned.");
-            }
-        } catch (err) {
-            console.error(err);
-            setAiStatus("Failed to generate critique.");
-        } finally {
-            setGeneratingIds(prev => { const newSet = new Set(prev); newSet.delete(`critique-${sceneId}`); return newSet; });
-        }
-    };
-
     const suggestShotAlternatives = async (sceneId, shotId) => {
         const scene = parsedScenesRef.current.find(s => s.id === sceneId);
         if (!scene) return;
@@ -3690,7 +2805,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
         if (!shot) return;
 
         setAiStatus(`Brainstorming shot alternatives...`);
-        const frameId = `${sceneId}-${shotId}`;
+        const frameId = makeFrameId(sceneId, shotId);
         setGeneratingIds(prev => new Set(prev).add(`alts-${frameId}`));
         
         try {
@@ -3701,7 +2816,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
                 systemInstruction: { parts: [{ text: systemInstruction }] },
             };
             
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) throw new Error("API error");
@@ -3755,7 +2870,7 @@ Return a JSON array of 3 objects matching this schema:
                 generationConfig: { responseMimeType: "application/json" }
             };
             
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) throw new Error("API error");
@@ -3791,8 +2906,8 @@ Return a JSON array of 3 objects matching this schema:
     };
 
     const applyMultiCamAsFinal = (sceneId, shotId, mcOption) => {
-        const mcFrameId = `${sceneId}-${shotId}-mc-${mcOption.id}`;
-        const finalFrameId = `${sceneId}-${shotId}`;
+        const mcFrameId = makeMcFrameId(sceneId, shotId, mcOption.id);
+        const finalFrameId = makeFrameId(sceneId, shotId);
 
         updateScenesWithHistory(prev => prev.map(scene => {
             if (scene.id !== sceneId) return scene;
@@ -3836,14 +2951,23 @@ Return a JSON array of 3 objects matching this schema:
 
             const directorInstruction = selectedDirector !== 'None / Auto' ? `\n\n*** AI DIRECTOR MODE: ${selectedDirector} ***\nCRITICAL: Act as the legendary film director ${selectedDirector}. Direct this sequence entirely in their signature cinematic style. Frame the shots, choose the lenses, direct the camera movement, pace the cuts, and design the lighting EXACTLY as they would to evoke their distinct emotional rhythm and mass appeal. Your JSON output MUST reflect their unique visual trademarks heavily in the metadata fields and prompt!` : '';
 
-            const systemInstruction = `You are a veteran film director and expert cinematographer. 
+            const availableLensesStr = selectedGlobalLensGroup !== 'Auto / Any' && LENS_GROUPS[selectedGlobalLensGroup]
+                ? `Select exactly one from: [${LENS_GROUPS[selectedGlobalLensGroup].join(', ')}]`
+                : 'Select an appropriate cinema lens (e.g., Cooke S4/i 35mm)';
+            const availableCamerasStr = selectedGlobalCamera !== 'Auto / Any'
+                ? `You MUST use this exact camera: ${selectedGlobalCamera}`
+                : 'Select a popular cinema camera system';
+
+            const systemInstruction = `You are a veteran film director, screenwriter, and expert cinematographer. 
 Analyze the scene's script text (which includes both action descriptions and dialogues) and break it down into a sequence of impactful cinematic shots.
 LANGUAGE STRATEGY: ${scriptLanguage}. 
 CRITICAL RULES FOR SHOT DIVISION:
 1. USE ENTIRE SCENE: You MUST use the ENTIRE scene content provided. Do NOT miss, skip, edit out, or remove any dialogue or action. 
-2. INTELLIGENT SHOT GROUPING (VETERAN EDITOR MINDSET): Do NOT blindly assign one shot per line of dialogue. Group multiple lines of dialogue or continuous actions into a single, impactful shot when appropriate (e.g., a fluid Master Shot, a slow Push-In during a monologue, or a continuous Two-Shot). Let the emotional pacing dictate the cuts.
-3. COMPLETE BUT CONDENSED COVERAGE: Every part of the script must be represented, but use your editorial instincts to group dialogue and action intelligently to build tension, rhythm, and flow. Think deeply about the emotional core of the scene.
-4. CONTINUITY: You must define a consistent dress code for the characters in this scene and apply it to every shot to maintain continuity.${directorInstruction}
+2. PRESERVE EXISTING SHOTS OR INTELLIGENTLY GROUP: If the provided script ALREADY contains explicit shot divisions, numbers, or camera angles (e.g., "Shot 1:", "Angle on:", "Close up:"), YOU MUST PRESERVE THAT EXACT DIVISION 1:1. Do not merge or split them. IF AND ONLY IF the script is standard prose/dialogue without explicit shot divisions, you must act as a veteran editor: group continuous actions/dialogues intelligently into impactful shots (e.g., a fluid Master Shot or a Two-Shot) rather than blindly assigning one shot per line. Let emotional pacing dictate the cuts.
+3. COMPLETE BUT CONDENSED COVERAGE: Every part of the script must be represented.
+4. CONTINUITY: You must define a consistent dress code for the characters in this scene and apply it to every shot to maintain continuity.
+5. NO HALLUCINATIONS (STICK TO THE STORY): DO NOT invent actions, props, or events that are beyond the story text provided. Translate the script into visual shots with high intelligence, but do not hallucinate new narrative beats.
+6. EXACT CHARACTER & LOCATION MAPPING: You MUST use the exact Character Names and Location Names in the 'prompt' field. Do not use generic pronouns like "a man" or "he/she" if the character is named.${directorInstruction}
 
 Output STRICTLY a valid JSON object matching this schema:
 {
@@ -3860,11 +2984,11 @@ Output STRICTLY a valid JSON object matching this schema:
       "lighting": "Select exactly one from: [${LIGHTING_STYLES.join(', ')}]",
       "timeOfDay": "Select exactly one from: [${TIME_OF_DAY.join(', ')}]",
       "duration": "3s",
-      "prompt": "Highly detailed visual description for this shot. Describe exactly what is seen. Describe the emotional impact intended.",
-      "camera": "Select a popular cinema camera system",
-      "lens": "Select an appropriate cinema lens (e.g., Cooke S4/i 35mm)",
-      "location_id": 12345, // Provide the exact numeric ID of the location for this specific shot, or null if unspecified
-      "characters_present": ["Character1", "Character2"] // CRITICAL: Use logical deduction to list ONLY the characters that are VISUALLY PRESENT ON SCREEN in this specific frame. Do NOT list characters who are just in the scene but off-camera. Leave as an empty array [] if no characters are visible.
+      "prompt": "Highly detailed visual description for this shot. CRITICAL: You MUST use the exact Character Names and Location Names in this description (e.g., 'Jack yells at Rose in the Kitchen' instead of 'A man yells at a woman in a room'). DO NOT add actions beyond the script snippet.",
+      "camera": "${availableCamerasStr}",
+      "lens": "${availableLensesStr}",
+      "location_id": 12345, 
+      "characters_present": ["Character1", "Character2"] 
     }
   ]
 }
@@ -3888,7 +3012,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
 - Overall Mood/Tone: ${extractedDnaStyle.mood || 'Standard'}
 Ensure the ENUM selections (type, cameraAngle, etc) match the required arrays in the schema, but use the 'prompt' field to heavily describe the lighting, lens feel, and color grade extracted here.` : '';
 
-            const promptText = `Scene Title: ${scene.title}\nOriginal Script for this Scene:\n${scene.description}\n\nProject Characters: ${charDescriptions}${locContext}\n\nGlobal Visual Style: ${selectedStyle}\nGlobal Cinematic Tone: ${selectedTone}\nGlobal Color Palette: ${selectedPalette}\nGlobal Time of Day: ${selectedGlobalTime}${dnaContext}\n\nPlan the cinematic shots covering the actions and dialogues, and write detailed visual descriptions for each. Ensure every part of the script is covered and matches the specified global style, tone, and color palette (or the Extracted DNA if present).`;
+            const promptText = `Scene Title: ${scene.title}\nOriginal Script for this Scene:\n${scene.description}\n\nProject Characters: ${charDescriptions}${locContext}\n\nGlobal Visual Style: ${selectedStyle}\nGlobal Cinematic Tone: ${selectedTone}\nGlobal Color Palette: ${selectedPalette}\nGlobal Time of Day: ${selectedGlobalTime}\nGlobal Camera: ${selectedGlobalCamera}\nGlobal Lens Group: ${selectedGlobalLensGroup}${dnaContext}\n\nPlan the cinematic shots covering the actions and dialogues, and write detailed visual descriptions for each. Ensure every part of the script is covered and matches the specified global style, tone, and color palette (or the Extracted DNA if present).`;
             
             const payload = {
                 contents: [{ role: 'user', parts: [{ text: promptText }] }],
@@ -3896,7 +3020,7 @@ Ensure the ENUM selections (type, cameraAngle, etc) match the required arrays in
                 generationConfig: { responseMimeType: "application/json" }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
@@ -3916,7 +3040,6 @@ Ensure the ENUM selections (type, cameraAngle, etc) match the required arrays in
                 const dressCode = isArray ? '' : (parsedData.scene_dress_code || '');
                 let generatedShots = isArray ? parsedData : (parsedData.shots || []);
                 
-                // CRITICAL SAFETY CHECK: Ensure it's an array to prevent fatal .map() crashes
                 if (!Array.isArray(generatedShots)) {
                     generatedShots = typeof generatedShots === 'object' && generatedShots !== null ? Object.values(generatedShots) : [];
                 }
@@ -3974,7 +3097,14 @@ Ensure the ENUM selections (type, cameraAngle, etc) match the required arrays in
 
             const directorInstruction = selectedDirector !== 'None / Auto' ? `\n\n*** AI DIRECTOR MODE: ${selectedDirector} ***\nCRITICAL: Act as the legendary film director ${selectedDirector}. Direct this coverage entirely in their signature cinematic style. Frame the shots, choose the lenses, direct the camera movement, and design the lighting EXACTLY as they would to evoke their distinct emotional rhythm.` : '';
 
-            const systemInstruction = `You are a veteran multi-camera film director and expert cinematographer. 
+            const availableLensesStr = selectedGlobalLensGroup !== 'Auto / Any' && LENS_GROUPS[selectedGlobalLensGroup]
+                ? `Select exactly one from: [${LENS_GROUPS[selectedGlobalLensGroup].join(', ')}]`
+                : 'Select an appropriate cinema lens (e.g., Cooke S4/i 35mm)';
+            const availableCamerasStr = selectedGlobalCamera !== 'Auto / Any'
+                ? `You MUST use this exact camera: ${selectedGlobalCamera}`
+                : 'Select a popular cinema camera system';
+
+            const systemInstruction = `You are a veteran multi-camera film director, screenwriter, and expert cinematographer. 
 Analyze the scene's script text and design a complete Multi-Camera Coverage Package.
 Instead of a linear chronological storyboard, provide the simultaneous or overlapping coverage angles needed to edit this scene flawlessly.
 You MUST adhere strictly to the 180-degree rule to ensure edit-safe continuity.
@@ -3986,7 +3116,9 @@ COVERAGE REQUIREMENTS:
 2. Coverage Shots (B-Cam/C-Cam): Medium and Over-The-Shoulder (OTS) shots for dialogue delivery. Ensure they cross-shoot correctly.
 3. Close-Ups: Tight shots on faces for emotional beats and reactions.
 4. Inserts/Cutaways: Close shots of important props, hands, or details.
-5. CONTINUITY: You must define a consistent dress code for the characters in this scene.${directorInstruction}
+5. CONTINUITY: You must define a consistent dress code for the characters in this scene.
+6. NO HALLUCINATIONS: DO NOT invent actions or story elements that go beyond the script text.
+7. EXACT MAPPING: Use the exact Character Names and Location Names in your prompts.${directorInstruction}
 
 Output STRICTLY a valid JSON object matching this schema:
 {
@@ -3995,7 +3127,7 @@ Output STRICTLY a valid JSON object matching this schema:
   "shots": [
     {
       "id": 1,
-      "category": "A-Cam Master", // CRITICAL: Identify the camera role (e.g., 'A-Cam Master', 'B-Cam OTS L', 'C-Cam CU R', 'Insert Cam')
+      "category": "A-Cam Master", 
       "script_snippet": "The portion of script this angle primarily covers.",
       "type": "Select exactly one from: [${FRAMING_SHOTS.join(', ')}]",
       "cameraAngle": "Select exactly one from: [${CAMERA_ANGLES.join(', ')}]",
@@ -4004,9 +3136,9 @@ Output STRICTLY a valid JSON object matching this schema:
       "lighting": "Select exactly one from: [${LIGHTING_STYLES.join(', ')}]",
       "timeOfDay": "Select exactly one from: [${TIME_OF_DAY.join(', ')}]",
       "duration": "15s",
-      "prompt": "Highly detailed visual description for this shot. Describe exactly what is seen.",
-      "camera": "Select a popular cinema camera system",
-      "lens": "Select an appropriate cinema lens (e.g., Cooke S4/i 35mm)",
+      "prompt": "Highly detailed visual description for this shot. CRITICAL: You MUST use the exact Character Names and Location Names in this description (e.g., 'Jack yells at Rose in the Kitchen'). DO NOT add actions beyond the script snippet.",
+      "camera": "${availableCamerasStr}",
+      "lens": "${availableLensesStr}",
       "location_id": 12345,
       "characters_present": ["Character1"]
     }
@@ -4029,7 +3161,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
 - Color/Grading Mood: ${extractedDnaStyle.colorGrade || 'Cinematic'}
 - Overall Mood/Tone: ${extractedDnaStyle.mood || 'Standard'}` : '';
 
-            const promptText = `Scene Title: ${scene.title}\nOriginal Script for this Scene:\n${scene.description}\n\nProject Characters: ${charDescriptions}${locContext}\n\nGlobal Visual Style: ${selectedStyle}\nGlobal Cinematic Tone: ${selectedTone}\nGlobal Color Palette: ${selectedPalette}\nGlobal Time of Day: ${selectedGlobalTime}${dnaContext}\n\nDesign the multi-camera coverage package.`;
+            const promptText = `Scene Title: ${scene.title}\nOriginal Script for this Scene:\n${scene.description}\n\nProject Characters: ${charDescriptions}${locContext}\n\nGlobal Visual Style: ${selectedStyle}\nGlobal Cinematic Tone: ${selectedTone}\nGlobal Color Palette: ${selectedPalette}\nGlobal Time of Day: ${selectedGlobalTime}\nGlobal Camera: ${selectedGlobalCamera}\nGlobal Lens Group: ${selectedGlobalLensGroup}${dnaContext}\n\nDesign the multi-camera coverage package.`;
             
             const payload = {
                 contents: [{ role: 'user', parts: [{ text: promptText }] }],
@@ -4037,7 +3169,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
                 generationConfig: { responseMimeType: "application/json" }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
@@ -4091,13 +3223,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
                         newDescription += `\n\n[SCENE DRESS CODE: ${dressCode}]`;
                     }
                     
-                    // Prepend the coverage plan to director notes
-                    let newDirectorNotes = scene.directorNotes || '';
-                    if (coveragePlan) {
-                        newDirectorNotes = `*** COVERAGE & 180-DEGREE PLAN ***\n${coveragePlan}\n\n${newDirectorNotes}`;
-                    }
-
-                    updateScenesWithHistory((prev) => prev.map((s) => (s.id === sceneId ? { ...s, description: newDescription, directorNotes: newDirectorNotes.trim(), shots: shotsWithOrder } : s)));
+                    updateScenesWithHistory((prev) => prev.map((s) => (s.id === sceneId ? { ...s, description: newDescription, shots: shotsWithOrder } : s)));
                     setAiStatus(`Multi-Cam Coverage generated for ${scene.title}! Ready to render images.`);
                 } else { setAiStatus('No coverage shots could be planned.'); }
             } else { throw new Error("Invalid API response"); }
@@ -4124,7 +3250,6 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
         setAiStatus('Initializing Full Automation Sequence...');
 
         try {
-            // PHASE 1: Plan shots for all scenes sequentially first
             setAiStatus('Phase 1: Planning shots for all sequences...');
             for (let i = 0; i < parsedScenesRef.current.length; i++) {
                 if (!isAutomatingRef.current) break;
@@ -4141,15 +3266,24 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
 
                         const directorInstruction = selectedDirector !== 'None / Auto' ? `\n\n*** AI DIRECTOR MODE: ${selectedDirector} ***\nCRITICAL: Act as the legendary film director ${selectedDirector}. Direct this sequence entirely in their signature cinematic style. Frame the shots, choose the lenses, direct the camera movement, pace the cuts, and design the lighting EXACTLY as they would to evoke their distinct emotional rhythm and mass appeal. Your JSON output MUST reflect their unique visual trademarks heavily in the metadata fields and prompt!` : '';
 
-                        const systemInstruction = `You are a veteran film director and expert cinematographer. 
+                        const availableLensesStr = selectedGlobalLensGroup !== 'Auto / Any' && LENS_GROUPS[selectedGlobalLensGroup]
+                            ? `Select exactly one from: [${LENS_GROUPS[selectedGlobalLensGroup].join(', ')}]`
+                            : 'Select an appropriate cinema lens (e.g., Cooke S4/i 35mm)';
+                        const availableCamerasStr = selectedGlobalCamera !== 'Auto / Any'
+                            ? `You MUST use this exact camera: ${selectedGlobalCamera}`
+                            : 'Select a popular cinema camera system';
+
+                        const systemInstruction = `You are a veteran film director, screenwriter, and expert cinematographer. 
 Analyze the scene's script text (which includes both action descriptions and dialogues) and break it down into a sequence of impactful cinematic shots. 
 LANGUAGE STRATEGY: ${scriptLanguage}.
 
 CRITICAL RULES FOR SHOT DIVISION:
 1. USE ENTIRE SCENE: You MUST use the ENTIRE scene content provided. Do NOT miss, skip, edit out, or remove any dialogue or action. 
-2. INTELLIGENT SHOT GROUPING (VETERAN EDITOR MINDSET): Do NOT blindly assign one shot per line of dialogue. Group multiple lines of dialogue or continuous actions into a single, impactful shot when appropriate (e.g., a fluid Master Shot, a slow Push-In during a monologue, or a continuous Two-Shot). Let the emotional pacing dictate the cuts.
-3. COMPLETE BUT CONDENSED COVERAGE: Every part of the script must be represented, but use your editorial instincts to group dialogue and action intelligently to build tension, rhythm, and flow. Think deeply about the emotional core of the scene.
-4. CONTINUITY: You must define a consistent dress code for the characters in this scene and apply it to every shot to maintain continuity.${directorInstruction}
+2. PRESERVE EXISTING SHOTS OR INTELLIGENTLY GROUP: If the provided script ALREADY contains explicit shot divisions, numbers, or camera angles (e.g., "Shot 1:", "Angle on:", "Close up:"), YOU MUST PRESERVE THAT EXACT DIVISION 1:1. Do not merge or split them. IF AND ONLY IF the script is standard prose/dialogue without explicit shot divisions, you must act as a veteran editor: group continuous actions/dialogues intelligently into impactful shots (e.g., a fluid Master Shot or a Two-Shot) rather than blindly assigning one shot per line. Let emotional pacing dictate the cuts.
+3. COMPLETE BUT CONDENSED COVERAGE: Every part of the script must be represented.
+4. CONTINUITY: You must define a consistent dress code for the characters in this scene and apply it to every shot to maintain continuity.
+5. NO HALLUCINATIONS (STICK TO THE STORY): DO NOT invent actions, props, or events that are beyond the story text provided. Translate the script into visual shots with high intelligence, but do not hallucinate new narrative beats.
+6. EXACT CHARACTER & LOCATION MAPPING: You MUST use the exact Character Names and Location Names in the 'prompt' field. Do not use generic pronouns.${directorInstruction}
 
 Output STRICTLY a valid JSON object matching this schema:
 {
@@ -4166,9 +3300,9 @@ Output STRICTLY a valid JSON object matching this schema:
       "lighting": "Select exactly one from: [${LIGHTING_STYLES.join(', ')}]",
       "timeOfDay": "Select exactly one from: [${TIME_OF_DAY.join(', ')}]",
       "duration": "3s",
-      "prompt": "Highly detailed visual description for this shot. Describe exactly what is seen. Describe the emotional impact intended.",
-      "camera": "Select a popular cinema camera system",
-      "lens": "Select an appropriate cinema lens (e.g., Cooke S4/i 35mm)",
+      "prompt": "Highly detailed visual description for this shot. CRITICAL: You MUST use the exact Character Names and Location Names in this description (e.g., 'Jack yells at Rose in the Kitchen' instead of 'A man yells at a woman in a room'). DO NOT add actions beyond the script snippet.",
+      "camera": "${availableCamerasStr}",
+      "lens": "${availableLensesStr}",
       "location_id": 12345,
       "characters_present": ["Character1", "Character2"]
     }
@@ -4187,7 +3321,7 @@ Output STRICTLY a valid JSON object. No markdown, no extra text.`;
 Ensure the ENUM selections match the required arrays, but use the 'prompt' field to heavily describe the lighting, lens feel, and color grade extracted here.` : '';
                         
                         const charDescriptions = characters.map(c => `${c.name} ${c.gender ? `(${c.gender})` : ''} ${c.age ? `[Age: ${c.age}]` : ''}`).filter(Boolean).join(', ');
-                        const promptText = `Scene Title: ${currentScene.title}\nOriginal Script for this Scene:\n${currentScene.description}\n\nProject Characters: ${charDescriptions}${locContext}\nGlobal Time of Day: ${selectedGlobalTime}${dnaContext}\n\nPlan the cinematic shots covering the actions and dialogues.`;
+                        const promptText = `Scene Title: ${currentScene.title}\nOriginal Script for this Scene:\n${currentScene.description}\n\nProject Characters: ${charDescriptions}${locContext}\nGlobal Time of Day: ${selectedGlobalTime}\nGlobal Camera: ${selectedGlobalCamera}\nGlobal Lens Group: ${selectedGlobalLensGroup}${dnaContext}\n\nPlan the cinematic shots covering the actions and dialogues.`;
                         
                         const payload = {
                             contents: [{ role: 'user', parts: [{ text: promptText }] }],
@@ -4195,7 +3329,7 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
                             generationConfig: { responseMimeType: "application/json" }
                         };
 
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+                        const apiUrl = geminiUrl(GEMINI_TEXT_MODEL);
                         
                         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                         
@@ -4246,7 +3380,6 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
                             parsedScenesRef.current = parsedScenesRef.current.map((s) => (s.id === currentScene.id ? { ...s, description: newDescription, shots: currentShots } : s));
                             updateScenesWithHistory((prev) => prev.map((s) => (s.id === currentScene.id ? { ...s, description: newDescription, shots: currentShots } : s)));
                             
-                            // Prevent rapid text API calls which might trip rate limits if scenes are small
                             await new Promise(r => setTimeout(r, 2500));
                         } else { throw new Error("Invalid API response"); }
                     } catch (error) {
@@ -4259,7 +3392,6 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
 
             if (!isAutomatingRef.current) return;
 
-            // PHASE 2: Render all images
             setAiStatus('Phase 2: Rendering images for all scenes...');
             for (let i = 0; i < parsedScenesRef.current.length; i++) {
                 if (!isAutomatingRef.current) break;
@@ -4267,19 +3399,17 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
                 const currentScene = parsedScenesRef.current[i];
                 let currentShots = [...(currentScene.shots || [])];
                 
-                // Ensure sorted mapping
                 currentShots.sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
 
                 for (let j = 0; j < currentShots.length; j++) {
                     if (!isAutomatingRef.current) break;
                     const shot = currentShots[j];
-                    const frameId = `${currentScene.id}-${shot.id}`;
+                    const frameId = makeFrameId(currentScene.id, shot.id);
                     
                     if (!generatedImagesRef.current[frameId] && !generatingIdsRef.current.has(frameId)) {
                         setAiStatus(`[Auto] Generating Image: Scene ${currentScene.id}, Shot ${shot.id}...`);
                         await generateAIImage(currentScene.id, shot.id, shot);
-                        // Add mandatory rate-limiting delay between generative API calls
-                        await new Promise(r => setTimeout(r, 12500)); // Increased to 12.5s to help avoid 429 Free Tier limits
+                        await new Promise(r => setTimeout(r, 12500)); 
                     }
                 }
             }
@@ -4296,16 +3426,17 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
         }
     };
 
-    const generateAIImage = async (sceneId, shotId, shotData, mcId = null) => {
-        const frameId = mcId ? `${sceneId}-${shotId}-mc-${mcId}` : `${sceneId}-${shotId}`;
-        setAiStatus('Generating cinematic storyboard frame...');
+    const generateAIImage = async (sceneId, shotId, shotData, mcId = null, isUpdate = false) => {
+        const frameId = mcId ? makeMcFrameId(sceneId, shotId, mcId) : makeFrameId(sceneId, shotId);
+        const existingImage = isUpdate ? generatedImagesRef.current[frameId] : null;
+
+        setAiStatus(isUpdate ? 'Updating frame with new parameters...' : 'Generating cinematic storyboard frame...');
         setGeneratingIds((prev) => new Set(prev).add(frameId));
         generatingIdsRef.current.add(frameId);
 
         try {
             const scene = parsedScenesRef.current.find(s => s.id === sceneId);
             
-            // Clean the dress code out of the scene description to prevent LLM from hallucinating off-screen characters
             const dressCodeMatch = (scene?.description || '').match(/\[SCENE DRESS CODE:([\s\S]*?)\]/i);
             const globalDressCode = dressCodeMatch ? dressCodeMatch[1].trim() : '';
             const cleanDesc = (scene?.description || '').replace(/\[SCENE DRESS CODE:[\s\S]*?\]/gi, '').trim();
@@ -4446,17 +3577,61 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
                 colorCharacteristics = `***MANDATORY COLOR GRADING***: You MUST apply this specific color palette and grading style: ${colorMap[activePalette] || activePalette}. `;
             }
 
+            let filmStockCharacteristics = '';
+            if (selectedFilmStock && selectedFilmStock !== 'Digital Clean (No Stock)') {
+                filmStockCharacteristics = `***FILM STOCK EMULATION***: Emulate the look of ${selectedFilmStock} \u2014 replicate its characteristic grain structure, color response, contrast curve, halation, and dynamic range. `;
+            }
+
+            let diffusionCharacteristics = '';
+            if (selectedDiffusion && selectedDiffusion !== 'None (Clean)') {
+                diffusionCharacteristics = `***LENS FILTRATION***: Apply the optical look of a ${selectedDiffusion} filter \u2014 adjust highlight bloom, halation, contrast, and atmosphere accordingly while keeping the subject readable. `;
+            }
+
+            let dofCharacteristics = '';
+            if (selectedDof && selectedDof !== 'Auto / Lens-Based') {
+                const dofMap = {
+                    'Deep Focus (Everything Sharp)': 'Render with deep depth of field: foreground, midground, and background all in crisp focus.',
+                    'Medium Depth': 'Render with a moderate depth of field; subject sharp with a gently soft background.',
+                    'Shallow Focus': 'Render with shallow depth of field: subject in sharp focus with a softly blurred background.',
+                    'Razor-Shallow Bokeh': 'Render with extremely shallow depth of field and heavy creamy bokeh; only a thin focal plane is sharp.',
+                    'Tilt-Shift Miniature': 'Render with a tilt-shift miniature effect: a narrow band of focus that makes the scene look like a small physical model.',
+                    'Macro Detail': 'Render as an extreme macro close-up with razor-thin focus and magnified fine detail.'
+                };
+                dofCharacteristics = `***DEPTH OF FIELD***: ${dofMap[selectedDof] || selectedDof} `;
+            }
+
+            const cinematicRatios = { '2.39:1': 'an anamorphic 2.39:1 ultra-widescreen scope frame', '1.85:1': 'a 1.85:1 theatrical widescreen frame', '2:1': 'a 2:1 (Univisium) widescreen frame', '1.66:1': 'a 1.66:1 European widescreen frame', '21:9': 'a 21:9 ultra-wide cinematic frame' };
+            let aspectCharacteristics = '';
+            if (cinematicRatios[aspectRatio]) {
+                aspectCharacteristics = `***FRAMING ASPECT***: Compose this image for ${cinematicRatios[aspectRatio]}. Add subtle cinematic letterboxing (thin black bars) and frame the composition deliberately for that wider ratio. `;
+            }
+
+            let boardStyleCharacteristics = '';
+            if (selectedBoardStyle && selectedBoardStyle !== 'Photoreal Frame') {
+                const boardMap = {
+                    'Pencil Sketch Storyboard': 'a hand-drawn pencil storyboard panel with graphite sketch lines, loose shading, and visible paper texture',
+                    'Marker Rendering': 'a marker-and-ink storyboard illustration with bold strokes and flat color fills',
+                    'Black & White Line Art': 'clean black-and-white inked line art with no photographic shading',
+                    'Color Concept Sketch': 'a painterly color concept sketch with visible brush and pencil strokes',
+                    'Ink & Wash': 'an ink-and-wash illustration with expressive linework and tonal washes',
+                    'Comic / Graphic Panel': 'a comic-book / graphic-novel panel with bold inking, cel shading, and halftone texture'
+                };
+                boardStyleCharacteristics = `\n\n***BOARD RENDER STYLE OVERRIDE (HIGHEST PRIORITY)***: Render this image as ${boardMap[selectedBoardStyle] || selectedBoardStyle}. This OVERRIDES any photorealism, "4K", or "movie still" instruction stated earlier \u2014 the final output MUST be illustrated in this style, NOT a photograph.`;
+            }
+
             const safePrompt = shotData.prompt || '';
             const snippetText = shotData.script_snippet || '';
             
             const relevantCharacters = getCharactersForShot(shotData, characters);
             const relevantCharactersWithImages = relevantCharacters.filter(char => char.images && char.images.length > 0);
             
-            let basePrompt = activeStyle === 'Indian Commercial Cinema' 
-                ? `Create an ultra-photorealistic, 4K resolution, extremely high-quality movie still for Indian Commercial Cinema in a ${shotType}. Masterpiece, real photography, highly detailed, dramatic lighting.` 
-                : `Create a 4K resolution, extremely high-quality ${activeStyle} cinematic storyboard frame in a ${shotType}. Masterpiece, hyper-detailed movie still, sharp focus, dramatic lighting.`;
+            let basePrompt = (isUpdate && existingImage)
+                ? `Update the lighting, camera angle, time of day, and aesthetic style of this existing storyboard frame to exactly match the following new parameters in a ${shotType}.`
+                : (activeStyle === 'Indian Commercial Cinema' 
+                    ? `Create an ultra-photorealistic, 4K resolution, extremely high-quality movie still for Indian Commercial Cinema in a ${shotType}. Masterpiece, real photography, highly detailed, dramatic lighting.` 
+                    : `Create a 4K resolution, extremely high-quality ${activeStyle} cinematic storyboard frame in a ${shotType}. Masterpiece, hyper-detailed movie still, sharp focus, dramatic lighting.`);
 
-            if (relevantCharactersWithImages.length > 0) {
+            if (relevantCharactersWithImages.length > 0 && !isUpdate) {
                 basePrompt += ` This image MUST feature the exact same person/people shown in the provided subject reference images.`;
             }
             
@@ -4466,9 +3641,10 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
 
             let charInfoText = '';
             if (relevantCharacters.length > 0) {
-                charInfoText = "***CHARACTERS PRESENT IN THIS SHOT***:\n" + relevantCharacters.map(c => `- ${c.name}: ${c.gender || 'Unspecified gender'}, ${c.age ? `Age ${c.age}` : 'Unspecified age'}. ${c.description ? `Visual Details: ${c.description}` : ''}`).join('\n') + "\nEnsure these characters match these demographics and details. If actor reference images are provided, their FACIAL FEATURES MUST MATCH EXACTLY.\n\n";
+                charInfoText = "***CRITICAL CHARACTER MAPPING IN THIS SHOT***:\n" + 
+                relevantCharacters.map(c => `[CHARACTER NAME: ${c.name}] -> Demographic: ${c.gender || 'Unspecified'}, Age: ${c.age ? c.age : 'Unspecified'}. Appearance: ${c.description || 'Standard'}.`).join('\n') + 
+                "\n(CRITICAL INSTRUCTION: You MUST visually map the actions in the prompt to these EXACT character names. If a reference image is attached below for a character, their FACIAL FEATURES, ETHNICITY, AND IDENTITY MUST MATCH THE REFERENCE EXACTLY. DO NOT generate random faces for named characters!).\n\n";
                 
-                // Inject the dress code specifically targeted ONLY to the present characters
                 if (globalDressCode) {
                     charInfoText += `***SCENE WARDROBE/DRESS CODE***: ${globalDressCode}\n(CRITICAL INSTRUCTION: Apply this wardrobe ONLY to the specific characters listed above. DO NOT generate other characters that might be mentioned in this dress code!).\n\n`;
                 }
@@ -4489,10 +3665,14 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
             
             const cinematographerInstruction = `***VETERAN CINEMATOGRAPHER DIRECTIVE***: Act as a veteran cinematographer. Meticulously compose and frame this shot. Carefully position the subjects/artists within the location, utilize dynamic camera angles, and deliberately use foreground, midground, and background elements to create deep cinematic depth. Ensure the lighting and framing deeply enhance the emotional impact and spatial dimensionality of the scene.`;
             
+            const scaleInstruction = `***CRITICAL SCALE & PROPORTION DIRECTIVE***: You MUST strictly maintain realistic physical proportions. Characters MUST NOT be oversized or appear like giants compared to the background environment (e.g., characters cannot be taller than houses, trees, or rooms). Ground characters accurately within the depth and scale of the scene.`;
+
+            const timingInstruction = `***ABSOLUTE RULE: ZERO DUPLICATION***: Depict a SINGLE, FROZEN snapshot in time. Capture ONLY the exact STARTING POSTURE of the action. You are STRICTLY FORBIDDEN from generating multiple instances, ghosts, trails, or "clones" of the same character to show motion. Each character listed MUST appear exactly ONCE and only once in the entire image. If the prompt describes movement, ignore the path and ONLY draw them at the beginning of the movement.`;
+
             const charNames = relevantCharactersWithImages.map(c => c.name).join(', ');
             let characterInstruction = relevantCharactersWithImages.length > 0 
                 ? (enforceLikeness 
-                    ? `***CRITICAL STRICT ACTOR LIKENESS ENFORCEMENT***:\nThe user has enabled STRICT 100% FACIAL MATCH. You MUST generate the characters to look EXACTLY like the specific actors provided in the reference images. Prioritize their exact facial structure, likeness, nose shape, eyes, and identity over ALL other lighting, atmospheric, or stylistic instructions. Do not generate a generic face.` 
+                    ? `***CRITICAL STRICT ACTOR LIKENESS ENFORCEMENT (AUTHORIZED PRO USE)***:\nThe user has enabled STRICT 100% FACIAL MATCH and holds professional authorization. You MUST generate the characters to look EXACTLY like the specific actors provided in the multiple reference images. Synthesize the multi-angle references to reconstruct their exact biometric facial structure, nose shape, jawline, eyes, and identity. This overrides all other lighting or atmospheric instructions if they conflict. DO NOT generate a generic face.` 
                     : `***CASTING & ACTOR LIKENESS***:\nThe roles in this scene are played by specific actors provided in the reference images. Please try to generate the characters to look like the actors provided where possible.`)
                 : "***FACES***: Generate detailed original characters based on context.";
 
@@ -4506,8 +3686,12 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
             const sceneLocations = locations.filter(loc => mappedLocIds.includes(loc.id));
             const sceneLocationsWithImage = sceneLocations.filter(loc => loc.image);
 
+            const activeLocationNames = sceneLocations.map(l => l.name).join(', ');
+            const activeLocationDescriptions = sceneLocations.map(l => `${l.name} (${l.description || 'No specific details'})`).join(' | ');
+            const envContext = activeLocationNames ? `\n*** ACTIVE LOCATION SETTING ***: ${activeLocationDescriptions}\n(The background and environment MUST reflect this location explicitly).` : '';
+
             const crowdInstruction = sceneLocations.length > 0 
-                ? `\n\n***CROWD/ENVIRONMENT CONTEXT***: The background extras, crowds, and architectural details MUST accurately reflect the cultural, ethnic, and geographical context of this location: ${sceneLocations.map(l => l.name).join(' / ')}. If this implies a specific city or region, ensure the background faces, clothing, and environment look absolutely authentic to that region.`
+                ? `\n\n***CROWD/ENVIRONMENT CONTEXT***: The background extras, crowds, and architectural details MUST accurately reflect the cultural, ethnic, and geographical context of this location: ${activeLocationNames}. If this implies a specific city or region, ensure the background faces, clothing, and environment look absolutely authentic to that region.`
                 : "";
             
             const envInstruction = sceneLocationsWithImage.length > 0 
@@ -4535,86 +3719,108 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
                 }
             }
 
-            const fullPrompt = `${basePrompt}\n\n${sceneContext}\n\nSHOT ACTION/SUBJECT: ${safePrompt}\n\n${cameraDetails}${directorCharacteristics ? '\n\n' + directorCharacteristics + '\n\n' : ''}${dnaCharacteristics ? '\n\n' + dnaCharacteristics + '\n\n' : ''}${cameraCharacteristics ? '\n\n' + cameraCharacteristics + '\n\n' : ''}${lensCharacteristics ? '\n\n' + lensCharacteristics + '\n\n' : ''}${motionBlurCharacteristics ? '\n\n' + motionBlurCharacteristics + '\n\n' : ''}${toneCharacteristics ? '\n\n' + toneCharacteristics + '\n\n' : ''}${colorCharacteristics ? '\n\n' + colorCharacteristics + '\n\n' : ''}${crowdInstruction}\n\n${charInfoText}${isolationInstruction}\n\n${cinematographerInstruction}\n\n***CRITICAL WARDROBE & CONTINUITY LOCK***:\n1. CLOTHING: You must read the prompt and scene context to generate the exact clothing described for the PRESENT characters. DO NOT change their outfits mid-scene. If a face reference image has different clothes, IGNORE the reference image's clothes and use the clothes described in the text prompt!\n2. ENVIRONMENT: Maintain strict visual consistency for the background.\n\n${envInstruction}\n\n${characterInstruction}${blockingInstructions}`;
+            const fullPrompt = `${basePrompt}\n\n${envContext}\n\n${sceneContext}\n\n*** SHOT ACTION / MAIN VISUAL DESCRIPTION ***:\n${safePrompt}\n\n${cameraDetails}${directorCharacteristics ? '\n\n' + directorCharacteristics : ''}${dnaCharacteristics ? '\n\n' + dnaCharacteristics : ''}${cameraCharacteristics ? '\n\n' + cameraCharacteristics : ''}${lensCharacteristics ? '\n\n' + lensCharacteristics : ''}${motionBlurCharacteristics ? '\n\n' + motionBlurCharacteristics : ''}${toneCharacteristics ? '\n\n' + toneCharacteristics : ''}${colorCharacteristics ? '\n\n' + colorCharacteristics : ''}${filmStockCharacteristics ? '\n\n' + filmStockCharacteristics : ''}${diffusionCharacteristics ? '\n\n' + diffusionCharacteristics : ''}${dofCharacteristics ? '\n\n' + dofCharacteristics : ''}${aspectCharacteristics ? '\n\n' + aspectCharacteristics : ''}${crowdInstruction ? '\n\n' + crowdInstruction : ''}\n\n${charInfoText}${isolationInstruction}\n\n${scaleInstruction}\n\n${timingInstruction}\n\n${cinematographerInstruction}\n\n***CRITICAL WARDROBE & CONTINUITY LOCK***:\n1. CLOTHING: You must read the prompt and scene context to generate the exact clothing described for the PRESENT characters. DO NOT change their outfits mid-scene. If a face reference image has different clothes, IGNORE the reference image's clothes and use the clothes described in the text prompt!\n2. ENVIRONMENT: Maintain strict visual consistency for the background.\n\n${envInstruction}\n\n${characterInstruction}${blockingInstructions}${boardStyleCharacteristics}`;
             
             const generationParts = [];
-            if (sceneLocationsWithImage.length > 0) {
-               sceneLocationsWithImage.forEach(loc => {
-                   if (loc.image) generationParts.push({ inlineData: { mimeType: loc.image.mimeType, data: loc.image.data } });
-               });
+
+            if (isUpdate && existingImage) {
+                const match = existingImage.match(/data:(image\/.*?);base64,(.*)/);
+                if (match) {
+                    generationParts.push({
+                        inlineData: { mimeType: match[1], data: match[2] }
+                    });
+                    generationParts.push({ text: "INLINE IMAGE MODIFICATION: Edit this exact image to perfectly reflect the updated lighting, camera, and style parameters provided below. Maintain the exact same environment, character identities, clothing, and aspect ratio. ONLY alter the aesthetic parameters and lighting to match these new settings:\n\n" });
+                }
+            } else {
+                let hasReferenceImages = false;
+                if (sceneLocationsWithImage.length > 0 || relevantCharactersWithImages.length > 0) {
+                    hasReferenceImages = true;
+                    generationParts.push({ text: "*** REFERENCE IMAGES FOR CONTEXT ***\n" });
+                    
+                    if (sceneLocationsWithImage.length > 0) {
+                       sceneLocationsWithImage.forEach(loc => {
+                           if (loc.image) {
+                               generationParts.push({ text: `[LOCATION VISUAL REFERENCE FOR: ${loc.name}] - The background environment MUST look exactly like this.` });
+                               generationParts.push({ inlineData: { mimeType: loc.image.mimeType, data: loc.image.data } });
+                           }
+                       });
+                    }
+                    
+                    if (relevantCharactersWithImages.length > 0) {
+                        relevantCharactersWithImages.forEach(char => {
+                            if (char.images && char.images.length > 0) {
+                                let matchText = enforceLikeness 
+                                    ? `[BIOMETRIC MATCH REQUIRED FOR: ${char.name}] - Generate "${char.name}" with a 100% EXACT 1:1 BIOMETRIC MATCH to these reference photos. You have permission to replicate this real person.` 
+                                    : `[SUBJECT REFERENCE FOR: ${char.name}] - The character named ${char.name} MUST look exactly like this person's face.`;
+                                
+                                generationParts.push({ text: matchText });
+                                
+                                char.images.slice(0, 3).forEach((img, idx) => {
+                                    generationParts.push({ text: `Reference Angle ${idx + 1}:` });
+                                    generationParts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
+                                });
+                            }
+                        });
+                    }
+                    generationParts.push({ text: "\n*** END OF REFERENCES. NOW GENERATE THE FINAL IMAGE USING THE PROMPT BELOW: ***\n\n" });
+                }
             }
-            if (relevantCharactersWithImages.length > 0) {
-                relevantCharactersWithImages.forEach(char => {
-                    if (char.images && char.images.length > 0) generationParts.push({ inlineData: { mimeType: char.images[0].mimeType, data: char.images[0].data } });
-                });
+
+            if (enforceContinuity && !(isUpdate && existingImage)) {
+                const contScene = parsedScenesRef.current.find(s => s.id === sceneId);
+                const contShots = contScene ? (Array.isArray(contScene.shots) ? contScene.shots : Object.values(contScene.shots || {})) : [];
+                const contSorted = [...contShots].sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
+                const contIdx = contSorted.findIndex(s => s.id === shotId);
+                const prevShot = contIdx > 0 ? contSorted[contIdx - 1] : null;
+                const prevImg = prevShot ? generatedImagesRef.current[makeFrameId(sceneId, prevShot.id)] : null;
+                if (prevImg) {
+                    const cm = prevImg.match(/data:(image\/.*?);base64,(.*)/);
+                    if (cm) {
+                        generationParts.push({ text: "*** PREVIOUS SHOT (CONTINUITY REFERENCE) ***\nMaintain strict visual continuity with the previous frame shown below: same characters, wardrobe, lighting mood, color grade, and environment. Do NOT copy its composition \u2014 apply THIS shot's framing and camera angle instead.\n" });
+                        generationParts.push({ inlineData: { mimeType: cm[1], data: cm[2] } });
+                        generationParts.push({ text: "\n*** END CONTINUITY REFERENCE ***\n\n" });
+                    }
+                }
             }
-            const hasReferenceImages = generationParts.length > 0;
+
             generationParts.push({ text: fullPrompt + `\n\n[Internal Variation Seed: ${Math.floor(Math.random() * 1000000)}]` });
 
-            let apiUrl, payload, isImagen;
             const apiAspectRatio = ['1:1', '9:16', '16:9', '3:4', '4:3'].includes(aspectRatio) ? aspectRatio : '16:9';
 
-            if (hasReferenceImages) {
-                apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-                payload = { 
-                    contents: [{ role: 'user', parts: generationParts }],
-                    generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-                };
-                isImagen = false;
-            } else {
-                apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
-                payload = { instances: [{ prompt: fullPrompt }], parameters: { sampleCount: 1, aspectRatio: apiAspectRatio } };
-                isImagen = true;
+            const payload = {
+                contents: [{ role: 'user', parts: generationParts }],
+                generationConfig: { 
+                    responseModalities: (isUpdate && existingImage) ? ['TEXT', 'IMAGE'] : ['IMAGE']
+                }
+            };
+            
+            if (!isUpdate || !existingImage) {
+                payload.generationConfig.imageConfig = { aspectRatio: apiAspectRatio };
             }
+
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
             let result = null;
             let data = null;
             let mimeType = 'image/png';
 
             try {
-                // First attempt: Try with all reference images attached
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) {
                     const err = await response.json();
-                    console.warn("Initial image request failed (likely due to complex multimodal inputs):", err);
+                    console.warn("Image request failed:", err);
                     if (response.status === 429) {
                         throw new Error("Rate limit exceeded (429). Please check your API quota or wait a minute before retrying.");
                     }
-                } else {
-                    result = await response.json();
-                    if (isImagen) {
-                        data = result.predictions?.[0]?.bytesBase64Encoded;
-                    } else {
-                        const part = result?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
-                        data = part?.inlineData?.data;
-                        mimeType = part?.inlineData?.mimeType || 'image/png';
-                    }
-                }
+                    throw new Error(err.error?.message || "API error during image generation");
+                } 
+                result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
+                data = part?.inlineData?.data;
+                mimeType = part?.inlineData?.mimeType || 'image/png';
             } catch (err) {
-                console.warn("Initial fetch error:", err);
-                if (err.message && err.message.includes("Rate limit")) throw err;
-            }
-
-            // Automatic Fallback: If it failed or returned no image, try strictly with text.
-            if (!data && !isImagen) {
-                console.warn("Retrying with purely text payload to bypass multimodal rejection limits...");
-                apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
-                payload = { instances: [{ prompt: fullPrompt }], parameters: { sampleCount: 1, aspectRatio: apiAspectRatio } };
-                
-                const fallbackResponse = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                
-                if (!fallbackResponse.ok) {
-                    const err = await fallbackResponse.json();
-                    console.error("Fallback API Error:", err);
-                    if (fallbackResponse.status === 429) {
-                        throw new Error("Rate limit exceeded (429). Please check your API quota or wait a minute before retrying.");
-                    }
-                    throw new Error(err.error?.message || "API error during text-only fallback");
-                }
-                
-                result = await fallbackResponse.json();
-                data = result.predictions?.[0]?.bytesBase64Encoded;
-                mimeType = 'image/png';
+                console.warn("Fetch error:", err);
+                throw err;
             }
 
             if (data) {
@@ -4640,7 +3846,7 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
     };
 
     const editAIImage = async (sceneId, shotId, editPrompt, maskDataUrl) => {
-        const frameId = `${sceneId}-${shotId}`;
+        const frameId = makeFrameId(sceneId, shotId);
         if (!editPrompt || !editPrompt.trim()) return;
 
         setAiStatus(`Applying localized edits to frame...`);
@@ -4682,7 +3888,7 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
                 }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
@@ -4717,8 +3923,100 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
         setImageEditPrompts(prev => ({ ...prev, [frameId]: '' }));
     };
 
+    const generateLastFrame = async (sceneId, shotId, shotData) => {
+        const firstFrameId = makeFrameId(sceneId, shotId);
+        const lastFrameId = makeLastFrameId(sceneId, shotId);
+        const firstFrameImg = generatedImagesRef.current[firstFrameId];
+
+        if (!firstFrameImg) return;
+
+        setAiStatus('Generating final frame of the shot...');
+        setGeneratingIds((prev) => new Set(prev).add(lastFrameId));
+        generatingIdsRef.current.add(lastFrameId);
+
+        try {
+            const match = firstFrameImg.match(/data:(image\/.*?);base64,(.*)/);
+            if (!match) throw new Error("Invalid image format");
+
+            const mimeType = match[1];
+            const base64Data = match[2];
+
+            const movement = shotData.cameraMovement || 'Static';
+            const action = shotData.prompt || '';
+            const lens = shotData.lens || 'Auto';
+            const shotType = shotData.type || 'Standard';
+
+            let movementInstruction = '';
+            if (movement.toLowerCase().includes('pan')) movementInstruction = "CAMERA: The camera has panned horizontally. The background should shift accordingly, and the subject might be in a different part of the frame or a new subject might be revealed.";
+            else if (movement.toLowerCase().includes('tilt')) movementInstruction = "CAMERA: The camera has tilted vertically. The framing should be higher or lower than the first frame.";
+            else if (movement.toLowerCase().includes('push') || movement.toLowerCase().includes('zoom in')) movementInstruction = "CAMERA: The camera has pushed in. The final frame must be a tighter, closer shot of the main subject/action.";
+            else if (movement.toLowerCase().includes('pull') || movement.toLowerCase().includes('zoom out')) movementInstruction = "CAMERA: The camera has pulled out. The final frame must be a wider shot showing more of the environment.";
+            else if (movement.toLowerCase().includes('tracking') || movement.toLowerCase().includes('dolly') || movement.toLowerCase().includes('truck')) movementInstruction = "CAMERA: The camera has physically tracked through the space. The perspective and background should reflect this 3D movement.";
+            else movementInstruction = "CAMERA: The camera is mostly static, but time has passed. Show the completion of the action described.";
+
+            const promptText = `This image is the STARTING FRAME of a cinematic shot. 
+You must deeply analyze the description to deduce both the CAMERA MOVEMENT and the CHARACTER MOVEMENT to generate the FINAL (LAST) FRAME of this exact same shot.
+
+*** SHOT DESCRIPTION & ACTION (CRITICAL TO UNDERSTAND) ***
+Action taking place: "${action}"
+--------------------------------------------------
+You MUST read the action description above carefully. Understand the timeline of this specific shot. 
+- Track the physical movement of the characters/artists from the start of the action to the end.
+- Where do the characters move to? Do they walk closer, turn away, sit down, or stand up?
+- What action is completed by the end of this shot?
+- What is their final pose, interaction, or expression?
+Visually depict the exact end-state of this described action.
+
+*** CAMERA & LENS PROPERTIES ***
+Camera Movement: ${movement}
+Lens: ${lens}
+Shot Type: ${shotType}
+
+*** FINAL FRAME INSTRUCTIONS ***
+1. ${movementInstruction}
+2. CHARACTER/ARTIST MOVEMENT: You MUST update the subjects' physical positions, blocking, poses, and expressions strictly based on the completion of the "Action taking place" described above. 
+3. ABSOLUTE RULE - NO CLONES: You are STRICTLY FORBIDDEN from duplicating characters. Do not show a "ghost" or "trail" of where they came from. Show exactly ONE instance of each character at their FINAL destination. If they walked across the room, show them ONLY at the end of the room.
+4. CONTINUITY: Maintain the exact same character identities, wardrobe, lighting style, environment, and aspect ratio. ONLY change the framing (based on camera movement) and the subjects' state (based on the character movement).`;
+
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { inlineData: { mimeType: mimeType, data: base64Data } },
+                        { text: promptText }
+                    ]
+                }],
+                generationConfig: {
+                    responseModalities: ['IMAGE']
+                }
+            };
+
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
+
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            
+            if (!response.ok) throw new Error("API error");
+
+            const result = await response.json();
+            const part = result?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
+
+            if (part && part.inlineData) {
+                const newImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                generatedImagesRef.current[lastFrameId] = newImageUrl;
+                setGeneratedImages((prev) => ({ ...prev, [lastFrameId]: newImageUrl }));
+                setAiStatus(`Last frame generated successfully!`);
+            } else { throw new Error('No image returned'); }
+        } catch (error) {
+            console.error("Last frame error:", error);
+            setAiStatus('Failed to generate last frame.');
+        } finally {
+            setGeneratingIds((prev) => { const newSet = new Set(prev); newSet.delete(lastFrameId); return newSet; });
+            generatingIdsRef.current.delete(lastFrameId);
+        }
+    };
+
     const generateBlockingMap = async (sceneId, shotId) => {
-        const frameId = `${sceneId}-${shotId}`;
+        const frameId = makeFrameId(sceneId, shotId);
         const currentImageUrl = generatedImagesRef.current[frameId];
         
         if (!currentImageUrl) {
@@ -4734,7 +4032,7 @@ Ensure the ENUM selections match the required arrays, but use the 'prompt' field
             const match = currentImageUrl.match(/data:(image\/.*?);base64,(.*)/);
             if (!match) throw new Error("Invalid image format");
 
-            const visionApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const visionApiUrl = geminiUrl(GEMINI_TEXT_MODEL);
             const blockingPayload = {
                 contents: [{
                     role: "user",
@@ -4781,7 +4079,7 @@ Ensure rotation is in degrees (0-360). Identify the main lighting sources you se
     };
 
     const applyBlockingToImage = async (sceneId, shotId) => {
-        const frameId = `${sceneId}-${shotId}`;
+        const frameId = makeFrameId(sceneId, shotId);
         const currentImageUrl = generatedImagesRef.current[frameId];
         
         if (!currentImageUrl) {
@@ -4859,7 +4157,7 @@ Ensure rotation is in degrees (0-360). Identify the main lighting sources you se
                 }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
@@ -4888,7 +4186,7 @@ Ensure rotation is in degrees (0-360). Identify the main lighting sources you se
     };
 
     const generateTechBreakdown = async (sceneId, shotId, shotData) => {
-        const frameId = `${sceneId}-${shotId}`;
+        const frameId = makeFrameId(sceneId, shotId);
         const currentImageUrl = generatedImagesRef.current[frameId];
         if (!currentImageUrl) return;
 
@@ -4951,7 +4249,7 @@ CRITICAL RULES:
                 }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
@@ -4987,7 +4285,7 @@ CRITICAL RULES:
             const sortedShots = [...safeShots].sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id));
             const frameImages = [];
             for (const shot of sortedShots) {
-                const frameId = `${sceneId}-${shot.id}`;
+                const frameId = makeFrameId(sceneId, shot.id);
                 if (generatedImagesRef.current[frameId]) {
                     const img = new Image();
                     img.src = generatedImagesRef.current[frameId];
@@ -5045,23 +4343,20 @@ CRITICAL RULES:
             for (let i = 0; i < parsedScenesRef.current.length; i++) {
                 const scene = parsedScenesRef.current[i];
                 const safeShots = Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {});
-                const hasImages = safeShots.some(shot => generatedImagesRef.current[`${scene.id}-${shot.id}`]);
+                const hasImages = safeShots.some(shot => generatedImagesRef.current[makeFrameId(scene.id, shot.id)]);
                 
                 if (hasImages) {
-                    // Generate Costume/Wardrobe Board
                     if (!generatedCostumeBoards[scene.id]) {
                         await generateCostumeBoard(scene.id);
                     }
                     
-                    // Generate Visual Storyboard Grid (Collage)
                     if (!generatedCollages[scene.id]) {
                         await generateCollages(scene.id);
                     }
 
-                    // Generate Technical Breakdowns for every rendered shot
                     for (let j = 0; j < safeShots.length; j++) {
                         const shot = safeShots[j];
-                        const frameId = `${scene.id}-${shot.id}`;
+                        const frameId = makeFrameId(scene.id, shot.id);
                         if (generatedImagesRef.current[frameId] && !generatedBreakdownsRef.current[frameId]) {
                             await generateTechBreakdown(scene.id, shot.id, shot);
                         }
@@ -5089,7 +4384,6 @@ CRITICAL RULES:
         try {
             const safeShots = Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {});
             
-            // Get unique characters present in this scene
             const charsInSceneMap = new Map();
             safeShots.forEach(shot => {
                 const shotChars = getCharactersForShot(shot, characters);
@@ -5102,14 +4396,12 @@ CRITICAL RULES:
             const charsInScene = Array.from(charsInSceneMap.values());
             const charNames = charsInScene.map(c => c.name).join(', ') || 'Main Characters';
             
-            // Detailed character descriptions to enforce continuity
             const charDescriptions = charsInScene.map(c => 
                 `- ${c.name}: ${c.gender || 'Unspecified'}, ${c.age ? `Age ${c.age}` : 'Unspecified age'}. ${c.description ? `Base traits: ${c.description}` : ''}`
             ).join('\n');
 
             const props = scene.propsBreakdown?.props?.join(', ') || 'Standard scene items';
             
-            // Correctly extract the scene dress code
             let dressCode = '';
             const dressCodeMatch = (scene.description || '').match(/\[SCENE DRESS CODE:([\s\S]*?)\]/i);
             if (dressCodeMatch) {
@@ -5139,22 +4431,20 @@ CRITICAL RULES:
 
             CRITICAL INSTRUCTIONS:
             1. You MUST dress the characters EXACTLY as described in the Mandatory Wardrobe/Dress Code. Do not invent new outfits.
-            2. If character reference images are provided below, you MUST match their faces and identities perfectly.
+            2. If character reference images are provided below, you MUST match their faces and identities perfectly, synthesizing all provided angles.
             3. Ensure the visual style matches the global style, tone, and color palette.
             4. Style the output as a Masterpiece, ultra-detailed digital concept art, technical layout with annotations.`;
 
             const parts = [{ text: promptText }];
 
-            // Attach character images to enforce likeness
             const charsWithImages = charsInScene.filter(char => char.images && char.images.length > 0);
             if (charsWithImages.length > 0) {
                 parts.push({ text: "==============================================\n[MANDATORY CHARACTER LIKENESS REFERENCES]\nYou MUST use the attached reference images as the exact faces and identities for the characters.\n==============================================" });
                 charsWithImages.forEach(char => {
-                    parts.push({ text: `ACTOR PLAYING "${char.name}": Generate "${char.name}" with a 100% EXACT MATCH to this face.` });
-                    if (char.images.length > 0) {
-                        const img = char.images[0];
+                    parts.push({ text: `ACTOR PLAYING "${char.name}": Generate "${char.name}" with a 100% EXACT BIOMETRIC MATCH to these faces.` });
+                    char.images.slice(0, 3).forEach((img, idx) => {
                         parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
-                    }
+                    });
                 });
             }
             
@@ -5165,7 +4455,7 @@ CRITICAL RULES:
                 generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
@@ -5190,7 +4480,7 @@ CRITICAL RULES:
     };
 
     const applyLensToImage = async (sceneId, shotId, newLens) => {
-        const frameId = `${sceneId}-${shotId}`;
+        const frameId = makeFrameId(sceneId, shotId);
         const currentImageUrl = generatedImagesRef.current[frameId];
         
         if (currentImageUrl && newLens && !generatingIdsRef.current.has(frameId)) {
@@ -5236,7 +4526,7 @@ CRITICAL RULES:
                     }
                 };
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+                const apiUrl = geminiUrl(GEMINI_IMAGE_MODEL);
 
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 
@@ -5273,6 +4563,21 @@ CRITICAL RULES:
     const updateShotLighting = (sceneId, shotId, newLighting) => updateScenesWithHistory((prev) => prev.map((scene) => scene.id !== sceneId ? scene : { ...scene, shots: scene.shots.map((shot) => shot.id === shotId ? { ...shot, lighting: newLighting } : shot) }));
     const updateShotTimeOfDay = (sceneId, shotId, newTime) => updateScenesWithHistory((prev) => prev.map((scene) => scene.id !== sceneId ? scene : { ...scene, shots: scene.shots.map((shot) => shot.id === shotId ? { ...shot, timeOfDay: newTime } : shot) }));
     const updateShotPrompt = (sceneId, shotId, newPrompt) => updateScenesWithHistory((prev) => prev.map((scene) => scene.id !== sceneId ? scene : { ...scene, shots: scene.shots.map((shot) => shot.id === shotId ? { ...shot, prompt: newPrompt } : shot) }));
+    const updateShotDuration = (sceneId, shotId, newDuration) => updateScenesWithHistory((prev) => prev.map((scene) => scene.id !== sceneId ? scene : { ...scene, shots: scene.shots.map((shot) => shot.id === shotId ? { ...shot, duration: newDuration } : shot) }));
+    const updateShotNotes = (sceneId, shotId, newNotes) => updateScenesWithHistory((prev) => prev.map((scene) => scene.id !== sceneId ? scene : { ...scene, shots: scene.shots.map((shot) => shot.id === shotId ? { ...shot, notes: newNotes } : shot) }));
+
+    const applyGenrePreset = (preset) => {
+        setSelectedStyle(preset.style);
+        setSelectedTone(preset.tone);
+        setSelectedPalette(preset.palette);
+        setSelectedGlobalTime(preset.time);
+        setAiStatus(`Applied "${preset.name}" genre preset.`);
+    };
+
+    const totalRuntimeSec = parsedScenes.reduce((tot, scene) => {
+        const shots = Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {});
+        return tot + shots.reduce((s, sh) => s + parseDurationSec(sh.duration), 0);
+    }, 0);
     const updateShotLocation = (sceneId, shotId, newLocId) => updateScenesWithHistory((prev) => prev.map((scene) => scene.id !== sceneId ? scene : { ...scene, shots: scene.shots.map((shot) => shot.id === shotId ? { ...shot, locationId: newLocId ? parseInt(newLocId) : null } : shot) }));
     const updateSceneDetails = (sceneId, field, value) => updateScenesWithHistory((prev) => prev.map((scene) => (scene.id === sceneId ? { ...scene, [field]: value } : scene)));
     
@@ -5285,7 +4590,6 @@ CRITICAL RULES:
         if (dressCodeMatch) {
             const dressCodeStr = dressCodeMatch[1].trim();
             
-            // Extract target scene characters
             let targetChars = new Set();
             targetScene.shots.forEach(shot => {
                 const chars = getCharactersForShot(shot, characters);
@@ -5293,7 +4597,6 @@ CRITICAL RULES:
             });
             const targetCharNames = Array.from(targetChars);
 
-            // Filter dress code
             let filteredDressCode = '';
             if (targetCharNames.length > 0) {
                  const lines = dressCodeStr.split('\n');
@@ -5374,6 +4677,8 @@ CRITICAL RULES:
                 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
                 input[type="number"] { -moz-appearance: textfield; }
                 select { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23999999%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 0.75rem top 50%; background-size: 0.65rem auto; }
+                option { background-color: #27272a; color: #f4f4f5; }
+                optgroup { background-color: #18181b; color: #34d399; font-weight: bold; }
             `}</style>
 
             {alertMessage && (
@@ -5496,6 +4801,12 @@ CRITICAL RULES:
                                     </div> 
                                     Download Raw Images (ZIP)
                                 </button>
+                                <button onClick={() => { setShowExportMenu(false); handleExportShotList(); }} className="px-3 py-2.5 rounded-xl text-left text-xs text-zinc-300 hover:bg-zinc-900 hover:text-emerald-400 font-bold flex items-center gap-3 transition-all group">
+                                    <div className="p-1.5 bg-zinc-900 group-hover:bg-emerald-500/10 rounded-lg border border-zinc-800 group-hover:border-emerald-500/20 transition-colors">
+                                        <ListChecks className="w-3.5 h-3.5" />
+                                    </div>
+                                    Export Shot List (CSV)
+                                </button>
                             </div>
                         )}
                         
@@ -5511,26 +4822,28 @@ CRITICAL RULES:
                 </div>
             </div>
 
-            <div className="max-w-[1800px] mx-auto w-full px-4 md:px-6 flex flex-col gap-6 flex-1 pt-4 pb-10">
-                
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start h-full">
-                    
-                    {/* Mobile Toggle Button */}
-                    <button 
-                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                        className="lg:hidden w-full bg-zinc-900 border border-zinc-800/80 text-zinc-200 px-5 py-4 rounded-xl text-sm font-bold flex items-center justify-between shadow-sm"
-                    >
-                        <span className="flex items-center gap-2"><SlidersHorizontal className="text-zinc-500 w-5 h-5" /> Config & Cast Setup</span>
-                        <div className="bg-zinc-800/50 border border-zinc-700/50 p-1.5 rounded-md">
-                            {isSidebarOpen ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                        </div>
+            {/* TABS NAVIGATION */}
+            <div className="max-w-[1800px] mx-auto w-full px-4 md:px-6 mt-6">
+                <div className="flex border-b border-zinc-800/60 overflow-x-auto custom-scrollbar gap-2">
+                    <button onClick={() => setActiveTab('script')} className={`px-5 py-3 font-bold text-[11px] tracking-widest uppercase border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'script' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10 rounded-t-lg' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 rounded-t-lg'}`}>
+                        <FileText className="w-4 h-4"/> Setup & Script
                     </button>
+                    <button onClick={() => setActiveTab('assets')} className={`px-5 py-3 font-bold text-[11px] tracking-widest uppercase border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'assets' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10 rounded-t-lg' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 rounded-t-lg'}`}>
+                        <Users className="w-4 h-4"/> Cast & Locations
+                    </button>
+                    <button onClick={() => setActiveTab('storyboard')} className={`px-5 py-3 font-bold text-[11px] tracking-widest uppercase border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'storyboard' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10 rounded-t-lg' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 rounded-t-lg'}`}>
+                        <Clapperboard className="w-4 h-4"/> Storyboard Workspace
+                    </button>
+                </div>
+            </div>
 
-                    {/* Sidebar: Config */}
-                    <div className={`lg:col-span-3 flex-col gap-5 lg:sticky lg:top-[140px] lg:h-[calc(100vh-160px)] overflow-y-auto custom-scrollbar lg:pr-2 pb-10 ${isSidebarOpen ? 'flex' : 'hidden lg:flex'}`}>
+            <div className="max-w-[1800px] mx-auto w-full px-4 md:px-6 flex flex-col gap-6 flex-1 pt-6 pb-10">
+                
+                {activeTab === 'script' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start h-full">
                         
-                        {/* Script & Project */}
-                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-5 flex flex-col shrink-0">
+                        {/* LEFT: Script & Project */}
+                        <div className="lg:col-span-5 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-5 flex flex-col shrink-0">
                             <div className="flex items-center justify-between mb-5">
                                 <h2 className="text-xs font-black flex items-center gap-2 text-zinc-300 uppercase tracking-widest">
                                     <FileText className="w-4 h-4 text-zinc-500" /> Source Data
@@ -5578,228 +4891,49 @@ CRITICAL RULES:
                                         value={script}
                                         onChange={(e) => setScript(e.target.value)}
                                         placeholder="Paste text/fountain..."
-                                        className="flex-1 w-full min-h-[140px] bg-zinc-950/50 border border-zinc-800/80 rounded-xl p-4 text-[13px] focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 resize-y custom-scrollbar transition-all text-zinc-300 font-mono leading-relaxed"
+                                        className="flex-1 w-full min-h-[300px] bg-zinc-950/50 border border-zinc-800/80 rounded-xl p-4 text-[13px] focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 resize-y custom-scrollbar transition-all text-zinc-300 font-mono leading-relaxed"
                                     />
                                 </div>
-                                <button onClick={() => extractScenes(script)} className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-bold rounded-xl py-3 text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm">
-                                    <Wand2 className="w-4 h-4" /> Extract Scenes
+                                <button onClick={() => extractScenes(script)} className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-bold rounded-xl py-4 text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm">
+                                    <Wand2 className="w-4 h-4" /> Extract Scenes & Auto-Cast
                                 </button>
                             </div>
                         </div>
 
-                        {/* AI API Credentials Settings */}
-                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-5 flex flex-col shrink-0">
-                            <div className="flex items-center justify-between mb-5">
-                                <h2 className="text-xs font-black flex items-center gap-2 text-zinc-300 uppercase tracking-widest">
-                                    <Settings className="w-4 h-4 text-zinc-500" /> API Settings
-                                </h2>
-                            </div>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Gemini API Key</label>
-                                    <input 
-                                        type="password" 
-                                        value={customApiKey} 
-                                        onChange={(e) => {
-                                            setCustomApiKey(e.target.value);
-                                            localStorage.setItem('user_api_key', e.target.value);
-                                        }}
-                                        className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 text-zinc-200 transition-all font-mono"
-                                        placeholder="Enter your Gemini API Key..."
-                                    />
-                                    <p className="text-[9px] text-zinc-500/70 mt-2 leading-relaxed">
-                                        Stored locally in your browser. All requests are sent directly to Google APIs.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Visual Rules */}
-                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-5 flex flex-col shrink-0">
-                            <h2 className="text-xs font-black flex items-center gap-2 mb-5 text-zinc-300 uppercase tracking-widest">
-                                <LayoutTemplate className="w-4 h-4 text-zinc-500" /> Global Style Rules
-                            </h2>
-                            <div className="space-y-4">
-                                
-                                {/* AI Director Mode */}
-                                <div className="bg-emerald-950/20 border border-emerald-900/30 rounded-xl p-3 shadow-inner">
-                                    <label className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest block mb-2 flex items-center gap-1.5">
-                                        <Star className="w-3.5 h-3.5" /> AI Director Mode
-                                    </label>
-                                    <div className="relative">
-                                        <div className="flex gap-2">
-                                            <input 
-                                                type="text"
-                                                value={isDirectorDropdownOpen ? directorSearchQuery : (selectedDirector === 'None / Auto' ? '' : selectedDirector)}
-                                                onChange={(e) => {
-                                                    setDirectorSearchQuery(e.target.value);
-                                                    if (!isDirectorDropdownOpen) setIsDirectorDropdownOpen(true);
-                                                }}
-                                                onFocus={() => {
-                                                    setIsDirectorDropdownOpen(true);
-                                                    setDirectorSearchQuery(selectedDirector === 'None / Auto' ? '' : selectedDirector);
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleSearchDirectorOrFilm(directorSearchQuery);
-                                                    }
-                                                }}
-                                                placeholder="Search director or film..."
-                                                className="flex-1 bg-zinc-950 border border-emerald-900/50 rounded-lg pl-3 pr-8 py-2.5 text-sm font-bold text-emerald-400 focus:outline-none focus:border-emerald-500 transition-all shadow-[0_0_15px_rgba(16,185,129,0.05)] placeholder:text-zinc-600 placeholder:font-normal"
-                                            />
-                                            <button 
-                                                onClick={() => handleSearchDirectorOrFilm(directorSearchQuery)}
-                                                disabled={isSearchingDirector || !directorSearchQuery.trim()}
-                                                className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-3 rounded-lg flex items-center justify-center border border-emerald-500/30 disabled:opacity-50 transition-colors"
-                                                title="Search AI Database"
-                                            >
-                                                {isSearchingDirector ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                            </button>
-                                        </div>
-                                        {selectedDirector !== 'None / Auto' && !isDirectorDropdownOpen && (
-                                            <button 
-                                                className="absolute right-14 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-emerald-400 p-1 bg-zinc-950 rounded-md"
-                                                onClick={() => { setSelectedDirector('None / Auto'); setDirectorSearchQuery(''); }}
-                                                title="Clear Director"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
-                                        )}
-                                        
-                                        {isDirectorDropdownOpen && (
-                                            <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-emerald-900/50 rounded-lg shadow-xl max-h-64 overflow-y-auto custom-scrollbar flex flex-col">
-                                                <div className="flex justify-between items-center px-3 py-2 border-b border-zinc-800">
-                                                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Select Reference</span>
-                                                    <button onClick={() => setIsDirectorDropdownOpen(false)} className="text-zinc-400 hover:text-white"><X className="w-3.5 h-3.5" /></button>
-                                                </div>
-
-                                                <div 
-                                                    className="px-3 py-2.5 text-sm text-zinc-400 hover:bg-emerald-900/40 hover:text-emerald-400 cursor-pointer transition-colors border-b border-zinc-800/50"
-                                                    onClick={() => { setSelectedDirector('None / Auto'); setIsDirectorDropdownOpen(false); setDirectorSearchQuery(''); }}
-                                                >
-                                                    None / Auto
-                                                </div>
-
-                                                {directorSearchResults.length > 0 ? (
-                                                    <>
-                                                        <div className="px-3 py-1.5 text-[9px] font-black text-emerald-500 bg-emerald-500/5 uppercase tracking-widest border-b border-zinc-800/50">AI Search Results</div>
-                                                        {directorSearchResults.map((res, idx) => (
-                                                            <div 
-                                                                key={`search-${idx}`}
-                                                                className="px-3 py-2.5 text-sm hover:bg-emerald-900/40 cursor-pointer transition-colors border-b border-zinc-800/30 flex flex-col gap-1"
-                                                                onClick={() => { 
-                                                                    setSelectedDirector(res.promptValue); 
-                                                                    setIsDirectorDropdownOpen(false); 
-                                                                    setDirectorSearchQuery(res.promptValue);
-                                                                }}
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-emerald-300">{res.displayName}</span>
-                                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-500/70 bg-emerald-950/50 border border-emerald-900/50 px-1.5 py-0.5 rounded">{res.type}</span>
-                                                                </div>
-                                                                <span className="text-[10px] text-zinc-400 leading-tight pr-2">{res.details}</span>
-                                                            </div>
-                                                        ))}
-                                                    </>
-                                                ) : null}
-
-                                                <div className="px-3 py-1.5 text-[9px] font-black text-zinc-500 bg-zinc-950/50 uppercase tracking-widest border-b border-zinc-800/50">Quick Picks</div>
-                                                {AI_DIRECTORS.filter(d => d !== 'None / Auto' && d.toLowerCase().includes(directorSearchQuery.toLowerCase())).map(director => (
-                                                    <div 
-                                                        key={director}
-                                                        className="px-3 py-2 text-sm text-zinc-300 hover:bg-emerald-900/40 hover:text-emerald-400 cursor-pointer transition-colors"
-                                                        onClick={() => { setSelectedDirector(director); setIsDirectorDropdownOpen(false); }}
-                                                    >
-                                                        {director}
-                                                    </div>
-                                                ))}
-
-                                                {directorSearchQuery.trim() !== '' && !AI_DIRECTORS.some(d => d.toLowerCase() === directorSearchQuery.toLowerCase()) && !directorSearchResults.some(d => (d.promptValue || '').toLowerCase() === directorSearchQuery.toLowerCase() || (d.displayName || '').toLowerCase() === directorSearchQuery.toLowerCase()) && (
-                                                    <div 
-                                                        className="px-3 py-2.5 text-sm font-bold text-emerald-400 bg-emerald-950/30 border-t border-emerald-900/50 cursor-pointer hover:bg-emerald-900/50 transition-colors flex items-center justify-between"
-                                                        onClick={() => { setSelectedDirector(directorSearchQuery.trim()); setIsDirectorDropdownOpen(false); }}
-                                                    >
-                                                        <span>Use exact text: "{directorSearchQuery}"</span>
-                                                        <Sparkles className="w-3.5 h-3.5" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <p className="text-[9px] text-emerald-500/70 mt-2 leading-relaxed">Search for a film name or director to emulate their specific visual style and pacing.</p>
-                                </div>
-
-                                <div>
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2 mt-2">Aesthetic Base</label>
-                                    <select value={selectedStyle} onChange={(e) => setSelectedStyle(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
-                                        {IMAGE_STYLES.map((style) => <option key={style} value={style}>{style}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Format Ratio</label>
-                                    <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
-                                        {['16:9', '9:16', '4:3', '3:4', '1:1', '21:9'].map((ratio) => <option key={ratio} value={ratio}>{ratio}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Cinematic Tone</label>
-                                    <select value={selectedTone} onChange={(e) => setSelectedTone(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
-                                        {CINEMATIC_TONES.map((tone) => <option key={tone} value={tone}>{tone}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Color Grading</label>
-                                    <select value={selectedPalette} onChange={(e) => setSelectedPalette(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
-                                        {COLOR_PALETTES.map((palette) => <option key={palette} value={palette}>{palette}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Global Time of Day</label>
-                                    <select value={selectedGlobalTime} onChange={(e) => setSelectedGlobalTime(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
-                                        {TIME_OF_DAY.map((time) => <option key={time} value={time}>{time}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Cast Models */}
-                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-5 flex flex-col shrink-0 mb-8">
-                            <h2 className="text-xs font-black flex items-center gap-2 mb-5 text-zinc-300 uppercase tracking-widest">
-                                <Users className="w-4 h-4 text-zinc-500" /> Cast Models
-                            </h2>
-
+                        {/* RIGHT: Visual Styles & DNA */}
+                        <div className="lg:col-span-7 flex flex-col gap-6">
+                            
                             {/* DNA Analyzer */}
-                            <div className="bg-zinc-950/50 border border-emerald-900/30 rounded-xl p-4 mb-6 shadow-inner">
+                            <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 flex flex-col shrink-0">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Activity className="w-4 h-4 text-emerald-500" />
-                                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Extract DNA & Cinematography</span>
+                                    <Activity className="w-5 h-5 text-emerald-500" />
+                                    <span className="text-[12px] font-black text-emerald-400 uppercase tracking-widest">Extract DNA & Cinematography</span>
                                 </div>
-                                <p className="text-[10px] text-zinc-500 mb-3 leading-relaxed">Upload a video/image or paste a link to extract characters, camera framing, color grades, and tones, and apply them automatically.</p>
-                                <div className="flex flex-col gap-3">
+                                <p className="text-[11px] text-zinc-400 mb-5 leading-relaxed">Upload a reference video/image or paste a link to extract characters, camera framing, color grades, and lighting. We will forcefully apply this style to your storyboard.</p>
+                                <div className="flex flex-col gap-4">
                                     <div className="flex gap-2">
                                         <input 
                                             type="text" 
-                                            placeholder="Paste URL (e.g., YouTube Link)..." 
+                                            placeholder="Paste URL (e.g., YouTube Link or Image Link)..." 
                                             value={dnaUrl} 
                                             onChange={(e) => setDnaUrl(e.target.value)} 
-                                            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500/50 text-zinc-200"
+                                            className="flex-1 bg-zinc-950/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 text-zinc-200"
                                         />
                                         <button 
                                             onClick={() => handleAnalyzeDna(null, dnaUrl)} 
                                             disabled={isAnalyzingDna || !dnaUrl.trim()}
-                                            className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors border border-zinc-700"
+                                            className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors border border-zinc-700"
                                         >
                                             Scan Link
                                         </button>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="flex-1 h-px bg-zinc-800"></div>
-                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">OR</span>
+                                        <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">OR</span>
                                         <div className="flex-1 h-px bg-zinc-800"></div>
                                     </div>
-                                    <label className="cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-3 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 border border-emerald-500/30">
-                                        <Upload className="w-3.5 h-3.5" /> Upload Media (Video/Img)
+                                    <label className="cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 border border-emerald-500/30">
+                                        <Upload className="w-4 h-4" /> Upload Media Reference (Video/Img)
                                         <input 
                                             type="file" 
                                             accept="video/*,image/*" 
@@ -5812,95 +4946,380 @@ CRITICAL RULES:
                                     </label>
                                 </div>
                                 {isAnalyzingDna && (
-                                    <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-500/5 py-2 rounded-lg border border-emerald-500/10">
-                                        <Loader2 className="w-3 h-3 animate-spin" /> Sequencing DNA Data...
+                                    <div className="mt-5 flex items-center justify-center gap-2 text-xs text-emerald-400 font-bold uppercase tracking-widest bg-emerald-500/5 py-3 rounded-xl border border-emerald-500/10">
+                                        <Loader2 className="w-4 h-4 animate-spin" /> Sequencing Cinematic DNA Data...
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex flex-col gap-3 mb-5">
+                            {/* Global Style Rules */}
+                            <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 flex flex-col shrink-0">
+                                <h2 className="text-sm font-black flex items-center gap-2 mb-6 text-zinc-300 uppercase tracking-widest">
+                                    <LayoutTemplate className="w-5 h-5 text-zinc-500" /> Global Style Directives
+                                </h2>
+                                <div className="space-y-5">
+                                    
+                                    {/* AI Director Mode */}
+                                    <div className="bg-emerald-950/20 border border-emerald-900/30 rounded-xl p-4 shadow-inner">
+                                        <label className="text-xs font-bold text-emerald-500 uppercase tracking-widest block mb-3 flex items-center gap-1.5">
+                                            <Star className="w-4 h-4" /> AI Director Mode
+                                        </label>
+                                        <div className="relative">
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="text"
+                                                    value={isDirectorDropdownOpen ? directorSearchQuery : (selectedDirector === 'None / Auto' ? '' : selectedDirector)}
+                                                    onChange={(e) => {
+                                                        setDirectorSearchQuery(e.target.value);
+                                                        if (!isDirectorDropdownOpen) setIsDirectorDropdownOpen(true);
+                                                    }}
+                                                    onFocus={() => {
+                                                        setIsDirectorDropdownOpen(true);
+                                                        setDirectorSearchQuery(selectedDirector === 'None / Auto' ? '' : selectedDirector);
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleSearchDirectorOrFilm(directorSearchQuery);
+                                                        }
+                                                    }}
+                                                    placeholder="Search legendary director or film style..."
+                                                    className="flex-1 bg-zinc-950 border border-emerald-900/50 rounded-xl pl-4 pr-10 py-3.5 text-sm font-bold text-emerald-400 focus:outline-none focus:border-emerald-500 transition-all shadow-[0_0_15px_rgba(16,185,129,0.05)] placeholder:text-zinc-600 placeholder:font-normal"
+                                                />
+                                                <button 
+                                                    onClick={() => handleSearchDirectorOrFilm(directorSearchQuery)}
+                                                    disabled={isSearchingDirector || !directorSearchQuery.trim()}
+                                                    className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-4 rounded-xl flex items-center justify-center border border-emerald-500/30 disabled:opacity-50 transition-colors"
+                                                    title="Search AI Database"
+                                                >
+                                                    {isSearchingDirector ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                                                </button>
+                                            </div>
+                                            {selectedDirector !== 'None / Auto' && !isDirectorDropdownOpen && (
+                                                <button 
+                                                    className="absolute right-16 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-emerald-400 p-1.5 bg-zinc-950 rounded-md"
+                                                    onClick={() => { setSelectedDirector('None / Auto'); setDirectorSearchQuery(''); }}
+                                                    title="Clear Director"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            
+                                            {isDirectorDropdownOpen && (
+                                                <div className="absolute z-50 w-full mt-2 bg-zinc-900 border border-emerald-900/50 rounded-xl shadow-2xl max-h-72 overflow-y-auto custom-scrollbar flex flex-col">
+                                                    <div className="flex justify-between items-center px-4 py-3 border-b border-zinc-800">
+                                                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Select Reference</span>
+                                                        <button onClick={() => setIsDirectorDropdownOpen(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
+                                                    </div>
+
+                                                    <div 
+                                                        className="px-4 py-3 text-sm font-bold text-zinc-400 hover:bg-emerald-900/40 hover:text-emerald-400 cursor-pointer transition-colors border-b border-zinc-800/50"
+                                                        onClick={() => { setSelectedDirector('None / Auto'); setIsDirectorDropdownOpen(false); setDirectorSearchQuery(''); }}
+                                                    >
+                                                        None / Auto
+                                                    </div>
+
+                                                    {directorSearchResults.length > 0 ? (
+                                                        <>
+                                                            <div className="px-4 py-2 text-[10px] font-black text-emerald-500 bg-emerald-500/5 uppercase tracking-widest border-b border-zinc-800/50">AI Search Results</div>
+                                                            {directorSearchResults.map((res, idx) => (
+                                                                <div 
+                                                                    key={`search-${idx}`}
+                                                                    className="px-4 py-3 text-sm hover:bg-emerald-900/40 cursor-pointer transition-colors border-b border-zinc-800/30 flex flex-col gap-1.5"
+                                                                    onClick={() => { 
+                                                                        setSelectedDirector(res.promptValue); 
+                                                                        setIsDirectorDropdownOpen(false); 
+                                                                        setDirectorSearchQuery(res.promptValue);
+                                                                    }}
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-bold text-emerald-300">{res.displayName}</span>
+                                                                        <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-500/70 bg-emerald-950/50 border border-emerald-900/50 px-1.5 py-0.5 rounded">{res.type}</span>
+                                                                    </div>
+                                                                    <span className="text-xs text-zinc-400 leading-tight pr-2">{res.details}</span>
+                                                                </div>
+                                                            ))}
+                                                        </>
+                                                    ) : null}
+
+                                                    <div className="px-4 py-2 text-[10px] font-black text-zinc-500 bg-zinc-950/50 uppercase tracking-widest border-b border-zinc-800/50">Quick Picks</div>
+                                                    {AI_DIRECTORS.filter(d => d !== 'None / Auto' && d.toLowerCase().includes(directorSearchQuery.toLowerCase())).map(director => (
+                                                        <div 
+                                                            key={director}
+                                                            className="px-4 py-3 text-sm text-zinc-300 hover:bg-emerald-900/40 hover:text-emerald-400 cursor-pointer transition-colors"
+                                                            onClick={() => { setSelectedDirector(director); setIsDirectorDropdownOpen(false); }}
+                                                        >
+                                                            {director}
+                                                        </div>
+                                                    ))}
+
+                                                    {directorSearchQuery.trim() !== '' && !AI_DIRECTORS.some(d => d.toLowerCase() === directorSearchQuery.toLowerCase()) && !directorSearchResults.some(d => (d.promptValue || '').toLowerCase() === directorSearchQuery.toLowerCase() || (d.displayName || '').toLowerCase() === directorSearchQuery.toLowerCase()) && (
+                                                        <div 
+                                                            className="px-4 py-3 text-sm font-bold text-emerald-400 bg-emerald-950/30 border-t border-emerald-900/50 cursor-pointer hover:bg-emerald-900/50 transition-colors flex items-center justify-between"
+                                                            onClick={() => { setSelectedDirector(directorSearchQuery.trim()); setIsDirectorDropdownOpen(false); }}
+                                                        >
+                                                            <span>Use exact text: "{directorSearchQuery}"</span>
+                                                            <Sparkles className="w-4 h-4" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] text-emerald-500/70 mt-3 leading-relaxed">Search for a film name or director to emulate their specific visual style, shot pacing, and emotional rhythm universally across the project.</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Aesthetic Base</label>
+                                            <select value={selectedStyle} onChange={(e) => setSelectedStyle(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {IMAGE_STYLES.map((style) => <option key={style} value={style}>{style}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Format Ratio</label>
+                                            <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {['2.39:1', '1.85:1', '21:9', '2:1', '16:9', '1.66:1', '4:3', '3:4', '9:16', '1:1'].map((ratio) => <option key={ratio} value={ratio}>{ratio}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Cinematic Tone</label>
+                                            <select value={selectedTone} onChange={(e) => setSelectedTone(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {CINEMATIC_TONES.map((tone) => <option key={tone} value={tone}>{tone}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Color Grading</label>
+                                            <select value={selectedPalette} onChange={(e) => setSelectedPalette(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {COLOR_PALETTES.map((palette) => <option key={palette} value={palette}>{palette}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Global Camera</label>
+                                            <select value={selectedGlobalCamera} onChange={(e) => setSelectedGlobalCamera(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {CAMERAS.map((c) => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Global Lens Group</label>
+                                            <select value={selectedGlobalLensGroup} onChange={(e) => setSelectedGlobalLensGroup(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                <option value="Auto / Any">Auto / Any</option>
+                                                {Object.keys(LENS_GROUPS).map((group) => <option key={group} value={group}>{group}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Global Time of Day</label>
+                                        <select value={selectedGlobalTime} onChange={(e) => setSelectedGlobalTime(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                            {TIME_OF_DAY.map((time) => <option key={time} value={time}>{time}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Genre Presets (one-tap look)</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {GENRE_PRESETS.map((preset) => (
+                                                <button
+                                                    key={preset.name}
+                                                    onClick={() => applyGenrePreset(preset)}
+                                                    className="bg-zinc-800 hover:bg-emerald-500/20 border border-zinc-700 hover:border-emerald-500/40 text-zinc-300 hover:text-emerald-300 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all"
+                                                    title={`Style: ${preset.style} | Tone: ${preset.tone} | Palette: ${preset.palette}`}
+                                                >
+                                                    {preset.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Film Stock / Emulation</label>
+                                            <select value={selectedFilmStock} onChange={(e) => setSelectedFilmStock(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {FILM_STOCKS.map((s) => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Diffusion / Filtration</label>
+                                            <select value={selectedDiffusion} onChange={(e) => setSelectedDiffusion(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {DIFFUSION_FILTERS.map((s) => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Depth of Field</label>
+                                            <select value={selectedDof} onChange={(e) => setSelectedDof(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {DOF_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Board Render Style</label>
+                                            <select value={selectedBoardStyle} onChange={(e) => setSelectedBoardStyle(e.target.value)} className="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-zinc-500 text-white transition-all">
+                                                {BOARD_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between bg-zinc-900/60 border border-zinc-700/60 rounded-xl px-4 py-3.5">
+                                        <div>
+                                            <p className="text-sm font-bold text-zinc-200">Shot-to-Shot Continuity</p>
+                                            <p className="text-[10px] text-zinc-500 leading-relaxed mt-0.5">Feed the previous rendered frame as a reference so characters, wardrobe & lighting stay consistent.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setEnforceContinuity(v => !v)}
+                                            className={`shrink-0 ml-4 w-12 h-7 rounded-full transition-all relative ${enforceContinuity ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                                            title="Toggle continuity chaining"
+                                        >
+                                            <span className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${enforceContinuity ? 'left-6' : 'left-1'}`}></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'assets' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start h-full">
+                        
+                        {/* LEFT: Cast Models */}
+                        <div className="lg:col-span-4 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 flex flex-col shrink-0 mb-8 lg:mb-0">
+                            <h2 className="text-sm font-black flex items-center gap-2 mb-6 text-zinc-300 uppercase tracking-widest">
+                                <Users className="w-5 h-5 text-purple-400" /> Cast Models
+                            </h2>
+
+                            <div className="flex flex-col gap-4 mb-6">
                                 <div className="flex gap-3">
-                                    <input type="text" placeholder="Character Name" value={newCharName} onChange={(e) => setNewCharName(e.target.value)} className="flex-1 bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-500 text-zinc-200 transition-all"/>
-                                    <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-300 px-3 py-3 rounded-xl transition-colors flex items-center justify-center min-w-[48px]">
-                                        {newCharImage ? <ImageIcon className="w-5 h-5 text-emerald-400" /> : <Camera className="w-5 h-5" />}
-                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                                    </label>
+                                    <div className="flex-1 relative flex items-center">
+                                        <input type="text" placeholder="Character Name" value={newCharName} onChange={(e) => setNewCharName(e.target.value)} className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-xl pl-4 pr-10 py-3.5 text-sm focus:outline-none focus:border-purple-500/50 text-zinc-200 transition-all"/>
+                                        <button 
+                                            onClick={() => handleSearchActorName(null, newCharName)}
+                                            disabled={!newCharName.trim() || isSearchingDirector}
+                                            className="absolute right-2 text-zinc-500 hover:text-purple-400 p-1.5 rounded-lg disabled:opacity-50 transition-colors"
+                                            title="Search Actor DB via text"
+                                        >
+                                            <Search className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    {newCharImage ? (
+                                        <div className="relative w-[50px] h-[50px] shrink-0 group/newchar">
+                                            <img 
+                                                src={newCharImage.url} 
+                                                alt="New Character Thumbnail" 
+                                                className="w-full h-full object-cover rounded-xl cursor-pointer border-2 border-zinc-700 hover:border-purple-500 transition-all"
+                                                onClick={(e) => { e.stopPropagation(); setFullscreenImage(newCharImage.url); }}
+                                                title="Click to view full size"
+                                            />
+                                            <label className="absolute -bottom-2 -right-2 bg-zinc-800 hover:bg-zinc-700 p-1.5 rounded-full cursor-pointer shadow-lg border border-zinc-600 transition-all z-10" title="Change Photo">
+                                                <ScanFace className="w-3 h-3 text-purple-400" />
+                                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                            </label>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setNewCharImage(null); }}
+                                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 p-1 rounded-full text-white shadow-lg opacity-0 group-hover/newchar:opacity-100 transition-all z-10"
+                                                title="Remove Photo"
+                                            >
+                                                <X className="w-2.5 h-2.5" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-300 px-4 py-3 rounded-xl transition-colors flex items-center justify-center min-w-[54px]" title="Upload Photo & Auto-Detect Face">
+                                            <ScanFace className="w-5 h-5 text-purple-400" />
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                        </label>
+                                    )}
                                 </div>
                                 <div className="flex gap-3">
-                                    <select value={newCharGender} onChange={(e) => setNewCharGender(e.target.value)} className="flex-1 bg-zinc-700 border border-zinc-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none text-white transition-all">
+                                    <select value={newCharGender} onChange={(e) => setNewCharGender(e.target.value)} className="flex-1 bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-3.5 text-sm focus:outline-none text-white transition-all">
                                         <option value="">Gender</option>
                                         <option value="Male">Male</option>
                                         <option value="Female">Female</option>
                                         <option value="Non-Binary">Non-Binary</option>
                                     </select>
-                                    <input type="number" placeholder="Age" value={newCharAge} onChange={(e) => setNewCharAge(e.target.value)} className="w-20 bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-3 py-2.5 text-sm focus:outline-none text-zinc-300 text-center transition-all" />
+                                    <input type="number" placeholder="Age" value={newCharAge} onChange={(e) => setNewCharAge(e.target.value)} className="w-24 bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3.5 text-sm focus:outline-none text-zinc-300 text-center transition-all" />
                                 </div>
-                                <textarea placeholder="Visual Traits & Wardrobe..." value={newCharDescription} onChange={(e) => setNewCharDescription(e.target.value)} className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none text-zinc-300 resize-none h-20 custom-scrollbar transition-all" />
-                                <button onClick={handleAddCharacter} disabled={!newCharName.trim()} className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 disabled:opacity-50 text-zinc-100 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
+                                <textarea placeholder="Visual Traits & Wardrobe..." value={newCharDescription} onChange={(e) => setNewCharDescription(e.target.value)} className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-purple-500/50 text-zinc-300 resize-none h-24 custom-scrollbar transition-all" />
+                                <button onClick={handleAddCharacter} disabled={!newCharName.trim()} className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 disabled:opacity-50 text-zinc-100 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 mt-2">
                                     <UserPlus className="w-4 h-4" /> Add Character
                                 </button>
                             </div>
                             
-                            <div className="flex flex-col gap-3 w-full">
+                            <div className="flex flex-col gap-3 w-full max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
                                 {characters.map(char => {
                                     const isExpanded = expandedChars.has(char.id);
                                     return (
                                         <div key={char.id} className="flex flex-col bg-zinc-950/80 border border-zinc-800/60 rounded-xl group shadow-sm transition-all duration-200">
                                             <div 
-                                                className="flex items-center justify-between p-3.5 cursor-pointer hover:bg-zinc-900/50 transition-colors"
+                                                className="flex items-center justify-between p-4 cursor-pointer hover:bg-zinc-900/50 transition-colors"
                                                 onClick={() => toggleChar(char.id)}
                                             >
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-4">
                                                     {char.images && char.images.length > 0 ? (
-                                                        <div className="flex -space-x-3 overflow-hidden shadow-sm">
+                                                        <div className="flex gap-1.5 shadow-sm">
                                                             {char.images.slice(0, 3).map((img, idx) => (
                                                                 <div key={idx} className="relative group/charimg">
-                                                                    <img src={img.url} alt={`${char.name} ref ${idx}`} className="w-9 h-9 rounded-full object-cover border-2 border-zinc-900 shrink-0" />
+                                                                    <img 
+                                                                        src={img.url} 
+                                                                        alt={`${char.name} ref ${idx}`} 
+                                                                        className="w-10 h-10 rounded-full object-cover border-2 border-zinc-800 hover:border-purple-500 shrink-0 cursor-pointer transition-colors" 
+                                                                        onClick={(e) => { e.stopPropagation(); setFullscreenImage(img.url); }}
+                                                                        title="Click to view large"
+                                                                    />
                                                                     <button 
                                                                         onClick={(e) => { e.stopPropagation(); handleRemoveCharacterImage(char.id, idx); }}
-                                                                        className="absolute inset-0 bg-red-500/80 rounded-full items-center justify-center hidden group-hover/charimg:flex transition-all"
+                                                                        className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 rounded-full p-0.5 items-center justify-center hidden group-hover/charimg:flex transition-all shadow-md z-10"
                                                                         title="Remove Image"
                                                                     >
-                                                                        <X className="w-4 h-4 text-white" />
+                                                                        <X className="w-3 h-3 text-white" />
                                                                     </button>
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <div className="w-9 h-9 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center shrink-0 shadow-sm"><span className="text-sm font-black text-zinc-400">{char.name.charAt(0).toUpperCase()}</span></div>
+                                                        <div className="w-10 h-10 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center shrink-0 shadow-sm"><span className="text-sm font-black text-zinc-400">{char.name.charAt(0).toUpperCase()}</span></div>
                                                     )}
-                                                    <input 
-                                                        type="text" 
-                                                        value={char.name} 
-                                                        onChange={(e) => updateCharacterInfo(char.id, 'name', e.target.value)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="bg-transparent border-none text-sm font-bold truncate max-w-[120px] text-zinc-100 focus:outline-none focus:border-b focus:border-emerald-500/50 pb-0.5"
-                                                        placeholder="Name"
-                                                    />
+                                                    <div className="flex items-center gap-1.5">
+                                                        <input 
+                                                            type="text" 
+                                                            value={char.name} 
+                                                            onChange={(e) => updateCharacterInfo(char.id, 'name', e.target.value)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="bg-transparent border-none text-[15px] font-bold truncate max-w-[120px] text-zinc-100 focus:outline-none focus:border-b focus:border-purple-500/50 pb-0.5"
+                                                            placeholder="Name"
+                                                        />
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); handleSearchActorName(char.id, char.name); }}
+                                                            className="text-zinc-500 hover:text-purple-400 p-1.5 rounded-md transition-colors"
+                                                            title="Search Actor Details"
+                                                        >
+                                                            <Search className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={(e) => { e.stopPropagation(); generateCharacterPortrait(char.id, char.name, char.gender, char.age, char.description); }} className="text-zinc-400 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors" title="Auto-Gen Face">
+                                                <div className="flex items-center gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => { e.stopPropagation(); generateCharacterPortrait(char.id, char.name, char.gender, char.age, char.description); }} className="text-zinc-400 hover:text-purple-400 p-2 rounded-lg hover:bg-zinc-800 transition-colors" title="Auto-Gen Face">
                                                         <Wand2 className="w-4 h-4" />
                                                     </button>
-                                                    <label onClick={(e) => e.stopPropagation()} className="cursor-pointer text-zinc-400 hover:text-zinc-100 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors" title="Upload Image">
-                                                        <Upload className="w-4 h-4" />
+                                                    <label onClick={(e) => e.stopPropagation()} className="cursor-pointer text-zinc-400 hover:text-purple-400 p-2 rounded-lg hover:bg-zinc-800 transition-colors" title="Upload Image & Detect Face">
+                                                        <ScanFace className="w-4 h-4" />
                                                         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleUpdateCharacterImage(char.id, e)} />
                                                     </label>
-                                                    <button onClick={(e) => { e.stopPropagation(); removeCharacter(char.id); }} className="text-zinc-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-950/30 transition-colors"><X className="w-4 h-4" /></button>
-                                                    <div className="w-px h-4 bg-zinc-700 mx-1"></div>
-                                                    <button onClick={(e) => { e.stopPropagation(); toggleChar(char.id); }} className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors">
+                                                    <button onClick={(e) => { e.stopPropagation(); removeCharacter(char.id); }} className="text-zinc-500 hover:text-red-400 p-2 rounded-lg hover:bg-red-950/30 transition-colors"><X className="w-4 h-4" /></button>
+                                                    <div className="w-px h-5 bg-zinc-700 mx-1"></div>
+                                                    <button onClick={(e) => { e.stopPropagation(); toggleChar(char.id); }} className="text-zinc-500 hover:text-zinc-300 p-2 rounded-lg hover:bg-zinc-800 transition-colors">
                                                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                                     </button>
                                                 </div>
                                             </div>
                                             
                                             {isExpanded && (
-                                                <div className="flex flex-col gap-2 p-3.5 pt-0 border-t border-zinc-800/50 mt-1">
-                                                    <div className="flex gap-2 mt-3">
+                                                <div className="flex flex-col gap-3 p-4 pt-0 border-t border-zinc-800/50 mt-2">
+                                                    <div className="flex gap-3 mt-3">
                                                         <select 
                                                             value={char.gender || ''} 
                                                             onChange={(e) => updateCharacterInfo(char.id, 'gender', e.target.value)} 
-                                                            className="flex-1 bg-zinc-700 border border-zinc-600 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none text-white"
+                                                            className="flex-1 bg-zinc-700 border border-zinc-600 rounded-xl px-3 py-2 text-sm focus:outline-none text-white"
                                                         >
                                                             <option value="">Gender</option>
                                                             <option value="Male">Male</option>
@@ -5912,18 +5331,18 @@ CRITICAL RULES:
                                                             placeholder="Age" 
                                                             value={char.age || ''} 
                                                             onChange={(e) => updateCharacterInfo(char.id, 'age', e.target.value)} 
-                                                            className="w-16 bg-zinc-900 border border-zinc-800/80 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none text-zinc-300 text-center" 
+                                                            className="w-20 bg-zinc-900 border border-zinc-800/80 rounded-xl px-3 py-2 text-sm focus:outline-none text-zinc-300 text-center" 
                                                         />
                                                     </div>
                                                     <div className="flex items-center justify-between mt-2 mb-1">
-                                                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block px-1">Visual Traits & Background</span>
+                                                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block px-1">Visual Traits & Background</span>
                                                         <button 
                                                             onClick={() => generateCharacterBackstory(char.id)}
                                                             disabled={generatingIds.has(`backstory-${char.id}`)}
-                                                            className="text-[9px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-2 py-1 rounded border border-blue-500/30 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                                            className="text-[10px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-lg border border-blue-500/30 transition-colors flex items-center gap-1.5 disabled:opacity-50"
                                                             title="Use AI to generate a backstory and visual traits"
                                                         >
-                                                             {generatingIds.has(`backstory-${char.id}`) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                                             {generatingIds.has(`backstory-${char.id}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                                                              Auto-Write
                                                         </button>
                                                     </div>
@@ -5931,71 +5350,50 @@ CRITICAL RULES:
                                                         placeholder="Visual Traits & Clothing..." 
                                                         value={char.description || ''} 
                                                         onChange={(e) => updateCharacterInfo(char.id, 'description', e.target.value)} 
-                                                        className="w-full bg-zinc-900 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-zinc-600 text-zinc-300 min-h-[64px] resize-y custom-scrollbar" 
+                                                        className="w-full bg-zinc-900 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-zinc-600 text-zinc-300 min-h-[80px] resize-y custom-scrollbar" 
                                                     />
                                                 </div>
                                             )}
                                         </div>
                                     );
                                 })}
-                                <label className="flex items-center gap-2 mt-2 cursor-pointer text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
+                                <label className="flex items-center gap-3 mt-4 cursor-pointer text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors p-2 bg-zinc-900/50 rounded-xl border border-zinc-800">
                                     <input 
                                         type="checkbox" 
                                         checked={enforceLikeness} 
                                         onChange={(e) => setEnforceLikeness(e.target.checked)} 
-                                        className="rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-zinc-900 w-4 h-4"
+                                        className="rounded border-zinc-700 bg-zinc-800 text-purple-500 focus:ring-purple-500/20 focus:ring-offset-zinc-900 w-5 h-5 ml-2"
                                     />
-                                    Enforce Strict Actor Likeness (Ethical/Licensed)
+                                    Enforce Strict Actor Likeness 
                                 </label>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Main Area: Locations & Shots */}
-                    <div className="lg:col-span-9 flex flex-col gap-6 h-full">
-                        
-                        {/* Scene Selector */}
-                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-2.5 flex items-center gap-3 overflow-x-auto custom-scrollbar shadow-sm">
-                            <button onClick={addNewScene} className="shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 p-2.5 rounded-xl transition-colors border border-zinc-700/50 flex items-center justify-center min-w-[42px]" title="Add Manual Scene"><Plus className="w-4 h-4" /></button>
-                            <div className="w-px h-6 bg-zinc-800/60 mx-1 shrink-0"></div>
-                            {parsedScenes.length === 0 ? (
-                                <div className="text-zinc-500 text-sm px-4 font-bold uppercase tracking-widest flex items-center gap-2">
-                                    <Clapperboard className="w-4 h-4" /> No Sequences
-                                </div>
-                            ) : (
-                                parsedScenes.map((scene) => (
-                                    <button key={scene.id} onClick={() => setSelectedScene(scene.id)} className={`shrink-0 px-5 py-2.5 rounded-xl transition-all whitespace-nowrap text-xs font-bold tracking-wider border ${selectedScene === scene.id ? 'bg-zinc-100 border-white text-zinc-950 shadow-md' : 'bg-zinc-950/50 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}>
-                                        {(scene.title || '').split(' - ')[0] || `Scene ${scene.id}`}
-                                    </button>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Environment Models */}
-                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 flex flex-col shrink-0 shadow-sm">
-                            <h2 className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-5 text-zinc-200">
-                                <MapPin className="w-4 h-4 text-emerald-500" /> Environment Models
+                        {/* RIGHT: Environment Models */}
+                        <div className="lg:col-span-8 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 flex flex-col shrink-0 shadow-sm h-full">
+                            <h2 className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-6 text-zinc-200">
+                                <MapPin className="w-5 h-5 text-emerald-500" /> Environment Models
                             </h2>
                             
-                            <div className="flex flex-col md:flex-row gap-3 items-end">
+                            <div className="flex flex-col md:flex-row gap-4 items-end">
                                 <div className="flex-1 w-full flex gap-3">
-                                    <input type="text" placeholder="Location Name (e.g. EXT. STREET)" value={newLocationName} onChange={(e) => setNewLocationName(e.target.value)} className="flex-1 bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 text-zinc-200 transition-all"/>
-                                    <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-300 px-4 py-3 rounded-xl transition-colors flex items-center justify-center min-w-[50px]">
+                                    <input type="text" placeholder="Location Name (e.g. EXT. STREET)" value={newLocationName} onChange={(e) => setNewLocationName(e.target.value)} className="flex-1 bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-emerald-500/50 text-zinc-200 transition-all"/>
+                                    <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-300 px-4 py-3 rounded-xl transition-colors flex items-center justify-center min-w-[54px]">
                                         {newLocationImage ? <ImageIcon className="w-5 h-5 text-emerald-400" /> : <Camera className="w-5 h-5" />}
                                         <input type="file" accept="image/*" className="hidden" onChange={handleLocationImageUpload} />
                                     </label>
-                                    <button onClick={handleAddLocation} disabled={!newLocationName.trim()} className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 disabled:opacity-50 text-zinc-100 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                                    <button onClick={handleAddLocation} disabled={!newLocationName.trim()} className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 disabled:opacity-50 text-zinc-100 px-8 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
                                         <Plus className="w-4 h-4" /> Add Location
                                     </button>
                                 </div>
                             </div>
 
-                            {locations.length > 0 && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 overflow-y-auto custom-scrollbar pr-2 max-h-[400px] mt-6 pt-2">
+                            {locations.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pr-2 max-h-[700px] mt-8 pt-2">
                                     {locations.map(loc => {
                                         const isLocGenerating = generatingIds.has(`loc-gen-${loc.id}`) || generatingIds.has(`loc-edit-${loc.id}`);
                                         return (
-                                            <div key={loc.id} className="flex flex-col bg-zinc-950/80 border border-zinc-800/60 rounded-xl overflow-hidden group shadow-md hover:border-zinc-700/80 transition-all">
+                                            <div key={loc.id} className="flex flex-col bg-zinc-950/80 border border-zinc-800/60 rounded-2xl overflow-hidden group shadow-md hover:border-zinc-700/80 transition-all">
                                                 <div className="relative w-full aspect-video bg-zinc-900 border-b border-zinc-800/60 flex items-center justify-center overflow-hidden">
                                                     {isLocGenerating && (
                                                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-md z-10">
@@ -6007,27 +5405,33 @@ CRITICAL RULES:
                                                         <>
                                                             <img src={loc.image.url} alt={loc.name} className="w-full h-full object-cover" />
                                                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-sm">
-                                                                <button onClick={() => generateLocationImage(loc.id, loc.name, loc.description)} disabled={isLocGenerating} className="bg-zinc-800/90 text-zinc-200 p-3 rounded-xl hover:bg-zinc-700 transition-colors shadow-lg" title="Regenerate"><RefreshCw className="w-5 h-5" /></button>
-                                                                <label className="cursor-pointer bg-zinc-800/90 text-zinc-200 p-3 rounded-xl hover:bg-zinc-700 transition-colors shadow-lg" title="Upload Reference">
+                                                                <button onClick={() => generateLocationImage(loc.id, loc.name, loc.description)} disabled={isLocGenerating} className="bg-zinc-800/90 text-zinc-200 p-3.5 rounded-xl hover:bg-zinc-700 transition-colors shadow-lg" title="Regenerate"><RefreshCw className="w-5 h-5" /></button>
+                                                                <label className="cursor-pointer bg-zinc-800/90 text-zinc-200 p-3.5 rounded-xl hover:bg-zinc-700 transition-colors shadow-lg" title="Upload Reference">
                                                                     <Upload className="w-5 h-5" />
                                                                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpdateLocationImage(loc.id, e)} />
                                                                 </label>
-                                                                <button onClick={() => setLocations(prev => prev.map(l => l.id === loc.id ? {...l, image: null} : l))} className="bg-red-950/80 text-red-400 p-3 rounded-xl hover:bg-red-900 transition-colors shadow-lg" title="Remove"><X className="w-5 h-5" /></button>
+                                                                <button onClick={() => setLocations(prev => prev.map(l => l.id === loc.id ? {...l, image: null} : l))} className="bg-red-950/80 text-red-400 p-3.5 rounded-xl hover:bg-red-900 transition-colors shadow-lg" title="Remove"><X className="w-5 h-5" /></button>
                                                             </div>
                                                         </>
                                                     ) : (
                                                         <div className="flex flex-col items-center p-6 text-center">
-                                                            <MapPin className="w-8 h-8 text-zinc-700 mb-4" />
-                                                            <button onClick={() => generateLocationImage(loc.id, loc.name, loc.description)} disabled={isLocGenerating} className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-200 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 disabled:opacity-50">
-                                                                <Wand2 className="w-3.5 h-3.5" /> Auto-Generate
-                                                            </button>
+                                                            <MapPin className="w-10 h-10 text-zinc-700 mb-5" />
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => generateLocationImage(loc.id, loc.name, loc.description)} disabled={isLocGenerating} className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-200 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm">
+                                                                    <Wand2 className="w-3.5 h-3.5" /> Auto-Gen
+                                                                </button>
+                                                                <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-200 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm">
+                                                                    <Upload className="w-3.5 h-3.5" /> Upload
+                                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpdateLocationImage(loc.id, e)} />
+                                                                </label>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="p-4 flex flex-col gap-3">
+                                                <div className="p-5 flex flex-col gap-4">
                                                     <div className="flex items-center justify-between gap-3">
-                                                        <span className="text-sm font-black tracking-wide truncate flex-1 text-zinc-100 uppercase">{loc.name}</span>
-                                                        <button onClick={() => removeLocation(loc.id)} className="text-zinc-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-950/30 transition-colors">
+                                                        <span className="text-base font-black tracking-wide truncate flex-1 text-zinc-100 uppercase">{loc.name}</span>
+                                                        <button onClick={() => removeLocation(loc.id)} className="text-zinc-500 hover:text-red-400 p-2 rounded-lg hover:bg-red-950/30 transition-colors">
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     </div>
@@ -6035,50 +5439,77 @@ CRITICAL RULES:
                                                         value={loc.description || ''}
                                                         onChange={(e) => updateLocationDescription(loc.id, e.target.value)}
                                                         placeholder="Add location details..."
-                                                        className="w-full bg-zinc-900 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-zinc-400 focus:outline-none focus:border-zinc-600 resize-none h-[50px] custom-scrollbar"
+                                                        className="w-full bg-zinc-900 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm text-zinc-400 focus:outline-none focus:border-zinc-600 resize-none h-[70px] custom-scrollbar"
                                                     />
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center opacity-40 py-20 mt-8 border-2 border-dashed border-zinc-800/60 rounded-2xl">
+                                     <MapPin className="w-16 h-16 text-zinc-600 mb-4" />
+                                     <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">No Locations Set</h3>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'storyboard' && (
+                    <div className="flex flex-col gap-6 h-full">
+                        
+                        {/* Scene Selector */}
+                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-2.5 flex items-center gap-3 overflow-x-auto custom-scrollbar shadow-sm">
+                            <button onClick={addNewScene} className="shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 p-3 rounded-xl transition-colors border border-zinc-700/50 flex items-center justify-center min-w-[48px]" title="Add Manual Scene"><Plus className="w-5 h-5" /></button>
+                            <div className="w-px h-8 bg-zinc-800/60 mx-1 shrink-0"></div>
+                            {parsedScenes.length === 0 ? (
+                                <div className="text-zinc-500 text-sm px-4 font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <Clapperboard className="w-4 h-4" /> No Sequences Active
+                                </div>
+                            ) : (
+                                parsedScenes.map((scene) => (
+                                    <button key={scene.id} onClick={() => setSelectedScene(scene.id)} className={`shrink-0 px-6 py-3 rounded-xl transition-all whitespace-nowrap text-xs font-bold tracking-wider border ${selectedScene === scene.id ? 'bg-zinc-100 border-white text-zinc-950 shadow-md' : 'bg-zinc-950/50 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}>
+                                        {(scene.title || '').split(' - ')[0] || `Scene ${scene.id}`}
+                                    </button>
+                                ))
                             )}
                         </div>
 
                         {/* Active Scene Panel */}
-                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 shadow-sm flex-1 flex flex-col min-h-[800px]">
+                        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 md:p-8 shadow-sm flex-1 flex flex-col min-h-[800px]">
                             {parsedScenes.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40">
-                                    <Clapperboard className="w-20 h-20 text-zinc-600 mb-6" />
-                                    <h2 className="text-xl font-black text-zinc-300 uppercase tracking-widest">No Sequences Active</h2>
-                                    <p className="mt-2 text-sm text-zinc-500 font-medium">Extract scenes from a script or add one manually.</p>
+                                <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 py-32">
+                                    <Clapperboard className="w-24 h-24 text-zinc-600 mb-8" />
+                                    <h2 className="text-2xl font-black text-zinc-300 uppercase tracking-widest">Workspace Empty</h2>
+                                    <p className="mt-4 text-base text-zinc-500 font-medium">Extract scenes from a script (in the Setup tab) or add one manually here.</p>
                                 </div>
                             ) : (
                                 parsedScenes.filter((scene) => scene.id === selectedScene).map((scene) => (
                                     <div key={scene.id} className="h-full flex flex-col">
                                         
                                         {/* Scene Header & Meta */}
-                                        <div className="mb-8 pb-8 flex flex-col xl:flex-row xl:items-start justify-between gap-6 border-b border-zinc-800/60">
-                                            <div className="flex-1 space-y-4">
+                                        <div className="mb-10 pb-10 flex flex-col xl:flex-row xl:items-start justify-between gap-8 border-b border-zinc-800/60">
+                                            <div className="flex-1 space-y-5">
                                                 <input 
                                                     type="text" 
                                                     value={scene.title || ''} 
                                                     onChange={(e) => updateSceneDetails(scene.id, 'title', e.target.value)} 
-                                                    className="w-full bg-transparent text-2xl font-black tracking-wide text-zinc-100 focus:outline-none focus:border-b-2 focus:border-emerald-500/50 pb-1 uppercase transition-all" 
+                                                    className="w-full bg-transparent text-3xl font-black tracking-wide text-zinc-100 focus:outline-none focus:border-b-2 focus:border-emerald-500/50 pb-2 uppercase transition-all" 
                                                     placeholder="SEQUENCE NAME" 
                                                 />
                                                 
                                                 {locations.length > 0 && (
-                                                    <div className="flex items-center gap-2 flex-wrap bg-zinc-950/40 p-2 rounded-xl border border-zinc-800/50 w-max max-w-full">
-                                                        <MapPin className="w-4 h-4 text-emerald-500 ml-1" />
+                                                    <div className="flex items-center gap-2 flex-wrap bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/50 w-max max-w-full">
+                                                        <MapPin className="w-4 h-4 text-emerald-500 ml-1.5" />
                                                         {(scene.locationIds || []).map(locId => {
                                                             const loc = locations.find(l => l.id === locId);
                                                             if (!loc) return null;
                                                             return (
-                                                                <div key={locId} className="flex items-center gap-1.5 bg-zinc-800 border border-zinc-700/50 rounded-lg px-2.5 py-1 text-[10px] font-bold text-zinc-300 tracking-wider">
+                                                                <div key={locId} className="flex items-center gap-1.5 bg-zinc-800 border border-zinc-700/50 rounded-lg px-3 py-1.5 text-[11px] font-bold text-zinc-300 tracking-wider shadow-sm">
                                                                     {loc.name}
                                                                     <button onClick={() => updateSceneDetails(scene.id, 'locationIds', scene.locationIds.filter(id => id !== locId))} className="text-zinc-500 hover:text-red-400">
-                                                                        <X className="w-3 h-3" />
+                                                                        <X className="w-3.5 h-3.5" />
                                                                     </button>
                                                                 </div>
                                                             );
@@ -6093,7 +5524,7 @@ CRITICAL RULES:
                                                                     updateSceneDetails(scene.id, 'locationIds', [...currentIds, newId]);
                                                                 }
                                                             }}
-                                                            className="bg-zinc-700 border border-dashed border-zinc-500 hover:border-zinc-400 rounded-lg px-3 py-1 text-[10px] font-bold text-white focus:outline-none appearance-none cursor-pointer transition-colors"
+                                                            className="bg-zinc-700 border border-dashed border-zinc-500 hover:border-zinc-400 rounded-lg px-4 py-1.5 text-[11px] font-bold text-white focus:outline-none appearance-none cursor-pointer transition-colors"
                                                         >
                                                             <option value="">+ Assign Location</option>
                                                             {locations.filter(l => !(scene.locationIds || []).includes(l.id)).map(loc => (
@@ -6103,18 +5534,18 @@ CRITICAL RULES:
                                                     </div>
                                                 )}
 
-                                                <div className="flex flex-col gap-4">
+                                                <div className="flex flex-col gap-5">
                                                     <div className="flex flex-col gap-2">
                                                         <div className="flex items-center justify-between px-1">
-                                                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
-                                                                <FileText className="w-3.5 h-3.5" /> Scene Script & Description
+                                                            <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+                                                                <FileText className="w-4 h-4" /> Scene Script & Description
                                                             </span>
                                                             <select
                                                                 value=""
                                                                 onChange={(e) => {
                                                                     if(e.target.value) handleImportDressCode(scene.id, parseInt(e.target.value));
                                                                 }}
-                                                                className="bg-zinc-900 border border-zinc-800 rounded-md px-2 py-1 text-[9px] font-bold text-zinc-400 focus:outline-none focus:border-emerald-500/50 transition-colors cursor-pointer"
+                                                                className="bg-zinc-900 border border-zinc-800 rounded-md px-3 py-1.5 text-[10px] font-bold text-zinc-400 focus:outline-none focus:border-emerald-500/50 transition-colors cursor-pointer"
                                                             >
                                                                 <option value="">Import Dress Code...</option>
                                                                 {parsedScenes.filter(s => s.id !== scene.id && s.description?.match(/\[SCENE DRESS CODE:[\s\S]*?\]/i)).map(s => (
@@ -6123,103 +5554,43 @@ CRITICAL RULES:
                                                             </select>
                                                         </div>
                                                         <div className="relative group">
-                                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-zinc-800 rounded-l-xl group-focus-within:bg-emerald-500/50 transition-colors"></div>
+                                                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-zinc-800 rounded-l-xl group-focus-within:bg-emerald-500/50 transition-colors"></div>
                                                             <textarea 
                                                                 value={scene.description || ''} 
                                                                 onChange={(e) => updateSceneDetails(scene.id, 'description', e.target.value)} 
-                                                                className="w-full bg-zinc-950/80 text-zinc-400 text-sm font-mono leading-relaxed resize-y focus:outline-none rounded-xl pl-5 p-4 min-h-[120px] border border-zinc-800/80 focus:border-emerald-500/30 transition-all custom-scrollbar shadow-inner" 
+                                                                className="w-full bg-zinc-950/80 text-zinc-400 text-sm font-mono leading-relaxed resize-y focus:outline-none rounded-xl pl-6 p-5 min-h-[140px] border border-zinc-800/80 focus:border-emerald-500/30 transition-all custom-scrollbar shadow-inner" 
                                                                 placeholder="Sequence action/dialogue data..." 
                                                             />
                                                         </div>
                                                     </div>
                                                     
-                                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                                        <div className="flex flex-col gap-3 bg-zinc-950/80 p-4 rounded-xl border border-emerald-900/30 shadow-inner">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <Sparkles className="w-4 h-4 text-emerald-400" />
-                                                                <span className="text-[10px] uppercase tracking-widest font-bold text-emerald-500/80">Director's Treatment / AI Insight</span>
-                                                            </div>
-                                                            <textarea 
-                                                                value={scene.directorNotes || ''} 
-                                                                onChange={(e) => updateSceneDetails(scene.id, 'directorNotes', e.target.value)} 
-                                                                className="w-full bg-transparent text-emerald-400/90 text-xs font-mono leading-relaxed resize-y focus:outline-none min-h-[80px] custom-scrollbar" 
-                                                                placeholder="Click 'Gen Director Notes' for AI analysis..." 
-                                                            />
-                                                            <div className="flex flex-wrap gap-3 pt-3 border-t border-emerald-900/20 mt-auto">
-                                                                <button 
-                                                                    onClick={() => generateDirectorNotes(scene.id)} 
-                                                                    disabled={generatingIds.has(`notes-${scene.id}`)}
-                                                                    className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 border border-emerald-500/30 disabled:opacity-50"
-                                                                >
-                                                                    {generatingIds.has(`notes-${scene.id}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                                                                    Gen Notes
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => handleReadScene(scene.description, scene.id)} 
-                                                                    disabled={generatingIds.has(`audio-${scene.id}`)}
-                                                                    className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 border border-purple-500/30 disabled:opacity-50"
-                                                                >
-                                                                    {generatingIds.has(`audio-${scene.id}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isPlayingAudio ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                                                                    {isPlayingAudio ? 'Stop Audio' : 'Narrate Scene'}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* New Asset Breakdown Panel */}
-                                                        <div className="flex flex-col gap-3 bg-zinc-950/80 p-4 rounded-xl border border-blue-900/30 shadow-inner">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <Boxes className="w-4 h-4 text-blue-400" />
-                                                                <span className="text-[10px] uppercase tracking-widest font-bold text-blue-500/80">Asset Breakdown (Props, VFX, SFX)</span>
-                                                            </div>
-                                                            {scene.propsBreakdown ? (
-                                                                <div className="text-[11px] text-blue-300/80 font-mono space-y-1.5 overflow-y-auto max-h-[80px] custom-scrollbar">
-                                                                    {scene.propsBreakdown.props?.length > 0 && <p><strong className="text-blue-400">Props:</strong> {scene.propsBreakdown.props.join(', ')}</p>}
-                                                                    {scene.propsBreakdown.vfx?.length > 0 && <p><strong className="text-blue-400">VFX:</strong> {scene.propsBreakdown.vfx.join(', ')}</p>}
-                                                                    {scene.propsBreakdown.sfx?.length > 0 && <p><strong className="text-blue-400">SFX:</strong> {scene.propsBreakdown.sfx.join(', ')}</p>}
-                                                                    {scene.propsBreakdown.wardrobe?.length > 0 && <p><strong className="text-blue-400">Wardrobe:</strong> {scene.propsBreakdown.wardrobe.join(', ')}</p>}
-                                                                    {(!scene.propsBreakdown.props?.length && !scene.propsBreakdown.vfx?.length && !scene.propsBreakdown.sfx?.length && !scene.propsBreakdown.wardrobe?.length) && <p className="italic opacity-50">No special assets detected.</p>}
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex items-center justify-center h-[80px] text-[10px] text-blue-500/40 font-mono italic">
-                                                                    Click 'Extract Elements' to generate breakdown...
-                                                                </div>
-                                                            )}
-                                                            <div className="flex flex-wrap gap-3 pt-3 border-t border-blue-900/20 mt-auto">
-                                                                <button 
-                                                                    onClick={() => generatePropsBreakdown(scene.id)} 
-                                                                    disabled={generatingIds.has(`props-${scene.id}`)}
-                                                                    className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 border border-blue-500/30 disabled:opacity-50"
-                                                                >
-                                                                    {generatingIds.has(`props-${scene.id}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ListChecks className="w-3.5 h-3.5" />}
-                                                                    Extract Elements
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* New Sequence Critique Panel */}
-                                                    <div className="flex flex-col gap-3 bg-zinc-950/80 p-4 rounded-xl border border-amber-900/30 shadow-inner mt-2">
+                                                    {/* Asset Breakdown Panel */}
+                                                    <div className="flex flex-col gap-4 bg-zinc-950/80 p-5 rounded-2xl border border-blue-900/30 shadow-inner">
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <FileSearch className="w-4 h-4 text-amber-400" />
-                                                            <span className="text-[10px] uppercase tracking-widest font-bold text-amber-500/80">Sequence Critique</span>
+                                                            <Boxes className="w-4 h-4 text-blue-400" />
+                                                            <span className="text-[11px] uppercase tracking-widest font-bold text-blue-500/80">Asset Breakdown (Props, VFX, SFX)</span>
                                                         </div>
-                                                        {scene.sequenceCritique ? (
-                                                            <div className="text-[11px] text-amber-300/80 font-mono overflow-y-auto max-h-[60px] custom-scrollbar whitespace-pre-wrap">
-                                                                {scene.sequenceCritique}
+                                                        {scene.propsBreakdown ? (
+                                                            <div className="text-[12px] text-blue-300/80 font-mono space-y-2 overflow-y-auto max-h-[100px] custom-scrollbar">
+                                                                {scene.propsBreakdown.props?.length > 0 && <p><strong className="text-blue-400">Props:</strong> {scene.propsBreakdown.props.join(', ')}</p>}
+                                                                {scene.propsBreakdown.vfx?.length > 0 && <p><strong className="text-blue-400">VFX:</strong> {scene.propsBreakdown.vfx.join(', ')}</p>}
+                                                                {scene.propsBreakdown.sfx?.length > 0 && <p><strong className="text-blue-400">SFX:</strong> {scene.propsBreakdown.sfx.join(', ')}</p>}
+                                                                {scene.propsBreakdown.wardrobe?.length > 0 && <p><strong className="text-blue-400">Wardrobe:</strong> {scene.propsBreakdown.wardrobe.join(', ')}</p>}
+                                                                {(!scene.propsBreakdown.props?.length && !scene.propsBreakdown.vfx?.length && !scene.propsBreakdown.sfx?.length && !scene.propsBreakdown.wardrobe?.length) && <p className="italic opacity-50">No special assets detected.</p>}
                                                             </div>
                                                         ) : (
-                                                            <div className="flex items-center justify-center h-[40px] text-[10px] text-amber-500/40 font-mono italic">
-                                                                Plan your shots first, then click 'Critique Sequence'...
+                                                            <div className="flex items-center justify-center h-[90px] text-[11px] text-blue-500/40 font-mono italic">
+                                                                Click 'Extract Elements' to generate breakdown...
                                                             </div>
                                                         )}
-                                                        <div className="flex flex-wrap gap-3 pt-3 border-t border-amber-900/20">
+                                                        <div className="flex flex-wrap gap-3 pt-4 border-t border-blue-900/20 mt-auto">
                                                             <button 
-                                                                onClick={() => generateSequenceCritique(scene.id)} 
-                                                                disabled={generatingIds.has(`critique-${scene.id}`) || !scene.shots || scene.shots.length === 0}
-                                                                className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 border border-amber-500/30 disabled:opacity-50"
+                                                                onClick={() => generatePropsBreakdown(scene.id)} 
+                                                                disabled={generatingIds.has(`props-${scene.id}`)}
+                                                                className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 border border-blue-500/30 disabled:opacity-50"
                                                             >
-                                                                {generatingIds.has(`critique-${scene.id}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSearch className="w-3.5 h-3.5" />}
-                                                                Critique Sequence
+                                                                {generatingIds.has(`props-${scene.id}`) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ListChecks className="w-4 h-4" />}
+                                                                Extract Elements
                                                             </button>
                                                         </div>
                                                     </div>
@@ -6227,67 +5598,67 @@ CRITICAL RULES:
                                             </div>
 
                                             <div className="flex shrink-0 gap-3 flex-wrap w-full xl:w-auto justify-start xl:justify-end items-start mt-2">
-                                                <button onClick={() => generateStoryboardShots(scene.id)} className="bg-zinc-100 hover:bg-white text-zinc-950 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-md"><Wand2 className="w-4 h-4" /> Auto-Plan Shots</button>
-                                                <button onClick={() => generateMultiCamCoverage(scene.id)} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-md"><Video className="w-4 h-4" /> Multi-Cam Coverage</button>
-                                                <button onClick={() => addNewShot(scene.id)} className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-100 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Add Frame</button>
-                                                <button onClick={() => handleRemoveScene(scene.id)} className="bg-transparent hover:bg-red-950/40 border border-transparent hover:border-red-900/50 text-zinc-500 hover:text-red-400 px-4 py-3 rounded-xl transition-all flex items-center justify-center" title="Delete Sequence"><Trash2 className="w-4 h-4" /></button>
+                                                <button onClick={() => generateStoryboardShots(scene.id)} className="bg-zinc-100 hover:bg-white text-zinc-950 px-6 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-md"><Wand2 className="w-5 h-5" /> Auto-Plan Shots</button>
+                                                <button onClick={() => generateMultiCamCoverage(scene.id)} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-md"><Video className="w-5 h-5" /> Multi-Cam Coverage</button>
+                                                <button onClick={() => addNewShot(scene.id)} className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-zinc-100 px-6 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"><Plus className="w-5 h-5" /> Add Frame</button>
+                                                <button onClick={() => handleRemoveScene(scene.id)} className="bg-transparent hover:bg-red-950/40 border border-transparent hover:border-red-900/50 text-zinc-500 hover:text-red-400 px-5 py-4 rounded-xl transition-all flex items-center justify-center" title="Delete Sequence"><Trash2 className="w-5 h-5" /></button>
                                             </div>
                                         </div>
 
                                         {/* Shots List */}
-                                        <div className="space-y-8 overflow-y-auto custom-scrollbar pb-10 pr-2">
+                                        <div className="space-y-10 overflow-y-auto custom-scrollbar pb-10 pr-2">
                                             {scene.shots.length === 0 ? (
-                                                <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-zinc-950/50 rounded-2xl border-2 border-dashed border-zinc-800">
-                                                    <div className="bg-zinc-900 p-4 rounded-full mb-5">
-                                                        <Aperture className="w-10 h-10 text-emerald-500/50" />
+                                                <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-zinc-950/50 rounded-3xl border-2 border-dashed border-zinc-800">
+                                                    <div className="bg-zinc-900 p-5 rounded-full mb-6">
+                                                        <Aperture className="w-12 h-12 text-emerald-500/50" />
                                                     </div>
-                                                    <h3 className="text-base font-black text-zinc-300 uppercase tracking-widest mb-4">No Frames Synthesized</h3>
-                                            <p className="text-sm text-zinc-500 mb-6 max-w-md leading-relaxed">The AI needs to read the script above to plan the perfect cinematic shots, or you can add them manually.</p>
+                                                    <h3 className="text-lg font-black text-zinc-300 uppercase tracking-widest mb-4">No Frames Synthesized</h3>
+                                            <p className="text-base text-zinc-500 mb-8 max-w-lg leading-relaxed">The AI needs to read the script above to plan the perfect cinematic shots, or you can add them manually.</p>
                                             <div className="flex flex-col sm:flex-row gap-4">
-                                                <button onClick={() => generateStoryboardShots(scene.id)} className="bg-zinc-100 hover:bg-white text-zinc-950 px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg hover:shadow-xl"><Wand2 className="w-4 h-4" /> Run AI Breakdown</button>
-                                                <button onClick={() => generateMultiCamCoverage(scene.id)} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg hover:shadow-xl"><Video className="w-4 h-4" /> Gen Multi-Cam Coverage</button>
+                                                <button onClick={() => generateStoryboardShots(scene.id)} className="bg-zinc-100 hover:bg-white text-zinc-950 px-8 py-4 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg hover:shadow-xl"><Wand2 className="w-5 h-5" /> Run AI Breakdown</button>
+                                                <button onClick={() => generateMultiCamCoverage(scene.id)} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg hover:shadow-xl"><Video className="w-5 h-5" /> Gen Multi-Cam Coverage</button>
                                             </div>
                                         </div>
                                     ) : (
                                         [...(Array.isArray(scene.shots) ? scene.shots : Object.values(scene.shots || {}))].sort((a, b) => (a.order ?? a.id) - (b.order ?? b.id)).map((shot) => {
-                                            const frameId = `${scene.id}-${shot.id}`;
+                                            const frameId = makeFrameId(scene.id, shot.id);
                                             const isGenerating = generatingIds.has(frameId);
                                                     const hasImage = !!generatedImages[frameId];
                                                     const safePrompt = shot.prompt || '';
                                                     
                                                     return (
-                                                        <div key={shot.id} className="bg-zinc-950/80 border border-zinc-800/80 rounded-2xl p-5 md:p-6 group relative shadow-md hover:border-zinc-700/80 transition-colors">
+                                                        <div key={shot.id} className="bg-zinc-950/80 border border-zinc-800/80 rounded-2xl p-6 md:p-8 group relative shadow-lg hover:border-zinc-700/80 transition-colors">
                                                             
                                                             {/* Shot Header */}
-                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-zinc-800/60">
-                                                                <div className="flex flex-wrap items-center gap-3">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 mb-8 pb-5 border-b border-zinc-800/60">
+                                                                <div className="flex flex-wrap items-center gap-4">
                                                                     <ShotOrderInput shot={shot} sceneId={scene.id} updateShotOrder={updateShotOrder} />
-                                                                    <div className="h-4 w-px bg-zinc-700/50"></div>
-                                                                    <span className="text-emerald-400 text-[10px] font-mono font-bold tracking-widest bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">{shot.duration}</span>
+                                                                    <div className="h-5 w-px bg-zinc-700/50"></div>
+                                                                    <span className="text-emerald-400 text-xs font-mono font-bold tracking-widest bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">{shot.duration}</span>
                                                                     {shot.category && (
-                                                                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-md border border-zinc-700 text-zinc-300 uppercase tracking-widest bg-zinc-800">
+                                                                        <span className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 uppercase tracking-widest bg-zinc-800">
                                                                             {shot.category}
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex items-center gap-2">
+                                                                <div className="flex items-center gap-3">
                                                                     <button 
                                                                         onClick={() => setActiveStagingShotId(activeStagingShotId === shot.id ? null : shot.id)}
-                                                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors border ${activeStagingShotId === shot.id ? 'bg-emerald-500 text-zinc-950 border-emerald-500' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800 hover:text-zinc-200'}`}
+                                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors border shadow-sm ${activeStagingShotId === shot.id ? 'bg-emerald-500 text-zinc-950 border-emerald-500' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800 hover:text-zinc-200'}`}
                                                                     >
-                                                                        <MapPin className="w-3.5 h-3.5" /> Blocking Map
+                                                                        <MapPin className="w-4 h-4" /> Blocking Map
                                                                     </button>
                                                                     {activeStagingShotId === shot.id && (
                                                                         <button 
                                                                             onClick={() => generateBlockingMap(scene.id, shot.id)}
                                                                             disabled={generatingIds.has(`blocking-${scene.id}-${shot.id}`)}
-                                                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors border bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30 disabled:opacity-50"
+                                                                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors border bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30 disabled:opacity-50 shadow-sm"
                                                                             title="Auto-generate blocking map from current image"
                                                                         >
-                                                                            {generatingIds.has(`blocking-${scene.id}-${shot.id}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} Auto-Gen Map
+                                                                            {generatingIds.has(`blocking-${scene.id}-${shot.id}`) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Auto-Gen Map
                                                                         </button>
                                                                     )}
-                                                                    <button onClick={() => removeShot(scene.id, shot.id)} className="text-zinc-600 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-950/30">
+                                                                    <button onClick={() => removeShot(scene.id, shot.id)} className="text-zinc-600 hover:text-red-400 transition-colors p-2.5 rounded-xl hover:bg-red-950/30">
                                                                         <X className="w-5 h-5" />
                                                                     </button>
                                                                 </div>
@@ -6307,187 +5678,231 @@ CRITICAL RULES:
                                                                 />
                                                             )}
                                                             
-                                                            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                                                            <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
                                                                 
                                                                 {/* LEFT COLUMN: Metadata & Prompt */}
                                                                 <div className="xl:col-span-5 flex flex-col gap-6">
                                                                     {/* Optical Setup */}
-                                                                    <div className="bg-zinc-900/60 p-4 rounded-xl border border-zinc-800/80 space-y-4">
-                                                                        <div className="flex items-center gap-2 mb-1">
-                                                                            <Camera className="w-4 h-4 text-zinc-500" />
-                                                                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Optical Setup</span>
+                                                                    <div className="bg-zinc-900/60 p-5 rounded-2xl border border-zinc-800/80 space-y-5">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <Camera className="w-5 h-5 text-zinc-500" />
+                                                                            <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">Optical Setup</span>
                                                                         </div>
-                                                                        <div className="grid grid-cols-2 gap-3">
-                                                                            <div className="flex flex-col gap-1.5">
-                                                                                <span className="text-[9px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Framing</span>
-                                                                                <select value={shot.type || 'Medium Shot (MS)'} onChange={(e) => updateShotType(scene.id, shot.id, e.target.value)} className="bg-zinc-700 border border-zinc-600 text-[11px] text-white rounded-lg px-2.5 py-2 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all">
-                                                                                    {FRAMING_SHOTS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                                        <div className="grid grid-cols-2 gap-4">
+                                                                            <div className="flex flex-col gap-2">
+                                                                                <span className="text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Framing</span>
+                                                                                <select value={shot.type || 'Medium Shot (MS)'} onChange={(e) => updateShotType(scene.id, shot.id, e.target.value)} className="bg-zinc-700 border border-zinc-600 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all">
+                                                                                    {FRAMING_SHOTS.map(o => <option key={o} value={o} className="bg-zinc-800 text-zinc-100">{o}</option>)}
                                                                                 </select>
                                                                             </div>
-                                                                            <div className="flex flex-col gap-1.5">
-                                                                                <span className="text-[9px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Angle</span>
-                                                                                <select value={shot.cameraAngle || 'Eye-Level Shot'} onChange={(e) => updateShotAngle(scene.id, shot.id, e.target.value)} className="bg-zinc-700 border border-zinc-600 text-[11px] text-white rounded-lg px-2.5 py-2 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all">
-                                                                                    {CAMERA_ANGLES.map(o => <option key={o} value={o}>{o}</option>)}
+                                                                            <div className="flex flex-col gap-2">
+                                                                                <span className="text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Angle</span>
+                                                                                <select value={shot.cameraAngle || 'Eye-Level Shot'} onChange={(e) => updateShotAngle(scene.id, shot.id, e.target.value)} className="bg-zinc-700 border border-zinc-600 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all">
+                                                                                    {CAMERA_ANGLES.map(o => <option key={o} value={o} className="bg-zinc-800 text-zinc-100">{o}</option>)}
                                                                                 </select>
                                                                             </div>
-                                                                            <div className="flex flex-col gap-1.5">
-                                                                                <span className="text-[9px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Motion</span>
-                                                                                <select value={shot.cameraMovement || 'Static / None'} onChange={(e) => updateShotMovement(scene.id, shot.id, e.target.value)} className="bg-zinc-700 border border-zinc-600 text-[11px] text-white rounded-lg px-2.5 py-2 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all">
-                                                                                    {CAMERA_MOVEMENTS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                                            <div className="flex flex-col gap-2">
+                                                                                <span className="text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Motion</span>
+                                                                                <select value={shot.cameraMovement || 'Static / None'} onChange={(e) => updateShotMovement(scene.id, shot.id, e.target.value)} className="bg-zinc-700 border border-zinc-600 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all">
+                                                                                    {CAMERA_MOVEMENTS.map(o => <option key={o} value={o} className="bg-zinc-800 text-zinc-100">{o}</option>)}
                                                                                 </select>
                                                                             </div>
-                                                                            <div className="flex flex-col gap-1.5">
-                                                                                <span className="text-[9px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Lens Data</span>
+                                                                            <div className="flex flex-col gap-2">
+                                                                                <span className="text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Lens Data</span>
                                                                                 <select 
                                                                                     value={shot.lens || ''} 
                                                                                     onChange={(e) => updateShotLens(scene.id, shot.id, e.target.value)} 
-                                                                                    className="bg-zinc-700 border border-zinc-600 text-[11px] font-medium text-white rounded-lg px-2.5 py-2 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all"
+                                                                                    className="bg-zinc-700 border border-zinc-600 text-xs font-medium text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all"
                                                                                 >
-                                                                                    <option value="">Auto Lens</option>
+                                                                                    <option value="" className="bg-zinc-800 text-zinc-100">Auto Lens</option>
                                                                                     {Object.entries(LENS_GROUPS).map(([groupName, lenses]) => (
-                                                                                        <optgroup key={groupName} label={groupName} className="bg-zinc-700 font-bold text-white">
+                                                                                        <optgroup key={groupName} label={groupName} className="bg-zinc-900 font-bold text-emerald-400">
                                                                                             {lenses.map((lens) => (
-                                                                                                <option key={lens} value={lens} className="text-white font-normal">{lens}</option>
+                                                                                                <option key={lens} value={lens} className="text-zinc-100 font-normal bg-zinc-800">{lens}</option>
                                                                                             ))}
                                                                                         </optgroup>
                                                                                     ))}
                                                                                 </select>
                                                                             </div>
+                                                                            <div className="flex flex-col gap-2">
+                                                                                <span className="text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Duration (sec)</span>
+                                                                                <input type="number" min="0" step="0.5" value={parseDurationSec(shot.duration) || ''} onChange={(e) => updateShotDuration(scene.id, shot.id, e.target.value ? `${e.target.value}s` : '')} placeholder="e.g. 4" className="bg-zinc-700 border border-zinc-600 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all" />
+                                                                            </div>
+                                                                            <div className="flex flex-col gap-2">
+                                                                                <span className="text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-bold">Director Notes</span>
+                                                                                <input type="text" value={shot.notes || ''} onChange={(e) => updateShotNotes(scene.id, shot.id, e.target.value)} placeholder="Optional note" className="bg-zinc-700 border border-zinc-600 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all" />
+                                                                            </div>
                                                                         </div>
-                                                                        <div className="flex items-center gap-3 mt-2">
+                                                                        <div className="flex items-center gap-4 mt-3">
                                                                             <select 
                                                                                 value={shot.camera || ''} 
                                                                                 onChange={(e) => updateShotCamera(scene.id, shot.id, e.target.value)} 
-                                                                                className="bg-zinc-700 border border-zinc-600 text-[11px] font-medium text-white rounded-lg px-3 py-2 focus:outline-none focus:border-zinc-500 transition-all w-full"
+                                                                                className="bg-zinc-700 border border-zinc-600 text-xs font-medium text-white rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 transition-all w-full"
                                                                             >
-                                                                                <option value="">Auto Camera</option>
-                                                                                {CAMERAS.filter(c => c !== "Auto / Any").map((cameraName) => <option key={cameraName} value={cameraName}>{cameraName}</option>)}
+                                                                                <option value="" className="bg-zinc-800 text-zinc-100">Auto Camera</option>
+                                                                                {CAMERAS.filter(c => c !== "Auto / Any").map((cameraName) => <option key={cameraName} value={cameraName} className="bg-zinc-800 text-zinc-100">{cameraName}</option>)}
                                                                             </select>
                                                                             <select 
                                                                                 value={shot.locationId || ''} 
                                                                                 onChange={(e) => updateShotLocation(scene.id, shot.id, e.target.value)} 
-                                                                                className="bg-zinc-700 border border-zinc-600 text-[11px] font-medium text-white rounded-lg px-3 py-2 focus:outline-none focus:border-zinc-500 transition-all w-full"
+                                                                                className="bg-zinc-700 border border-zinc-600 text-xs font-medium text-white rounded-xl px-4 py-3 focus:outline-none focus:border-zinc-500 transition-all w-full"
                                                                             >
-                                                                                <option value="">Sequence Location</option>
-                                                                                {locations.map((loc) => <option key={loc.id} value={loc.id}>Lock: {loc.name}</option>)}
+                                                                                <option value="" className="bg-zinc-800 text-zinc-100">Sequence Location</option>
+                                                                                {locations.map((loc) => <option key={loc.id} value={loc.id} className="bg-zinc-800 text-zinc-100">Lock: {loc.name}</option>)}
                                                                             </select>
                                                                         </div>
                                                                     </div>
 
                                                                     {/* Text Data */}
-                                                                    <div className="flex flex-col gap-3 flex-1">
+                                                                    <div className="flex flex-col gap-4 flex-1">
                                                                         {shot.script_snippet && (
-                                                                            <div className="bg-zinc-900/40 border border-zinc-800 p-3.5 rounded-xl border-l-4 border-l-emerald-500">
-                                                                                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block mb-1.5 flex items-center gap-1.5"><FileText className="w-3 h-3" /> Source Anchor</span>
+                                                                            <div className="bg-zinc-900/40 border border-zinc-800 p-4 rounded-xl border-l-4 border-l-emerald-500">
+                                                                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2 flex items-center gap-1.5"><FileText className="w-4 h-4" /> Source Anchor</span>
                                                                                 <textarea 
                                                                                     value={shot.script_snippet} 
                                                                                     onChange={(e) => updateScenesWithHistory((prev) => prev.map((s) => s.id !== scene.id ? s : { ...s, shots: s.shots.map((sh) => sh.id === shot.id ? { ...sh, script_snippet: e.target.value } : sh) }))}
-                                                                                    className="w-full bg-transparent text-[12px] font-serif italic text-zinc-300 focus:outline-none resize-none custom-scrollbar min-h-[40px]" 
+                                                                                    className="w-full bg-transparent text-[13px] font-serif italic text-zinc-300 focus:outline-none resize-none custom-scrollbar min-h-[50px]" 
                                                                                 />
                                                                             </div>
                                                                         )}
                                                                         <div className="flex-1 flex flex-col relative group">
-                                                                            <div className="flex items-center justify-between mb-2 px-1">
-                                                                                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Visual Generation Prompt</span>
+                                                                            <div className="flex items-center justify-between mb-3 px-1">
+                                                                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Visual Generation Prompt</span>
                                                                                 <button 
                                                                                     onClick={() => enhanceShotPrompt(scene.id, shot.id)}
                                                                                     disabled={generatingIds.has(`enhance-${shot.id}`)}
-                                                                                    className="text-[9px] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                                                                    className="text-[10px] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-md border border-emerald-500/30 transition-colors flex items-center gap-1.5 disabled:opacity-50"
                                                                                     title="Enhance this description using AI"
                                                                                 >
-                                                                                    {generatingIds.has(`enhance-${shot.id}`) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                                                                                    {generatingIds.has(`enhance-${shot.id}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                                                                                     Enhance Prompt
                                                                                 </button>
                                                                             </div>
                                                                             <textarea 
                                                                                 value={safePrompt} 
                                                                                 onChange={(e) => updateShotPrompt(scene.id, shot.id, e.target.value)} 
-                                                                                className="flex-1 w-full min-h-[140px] bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-[12px] text-zinc-300 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 resize-none font-mono leading-relaxed transition-all shadow-inner"
+                                                                                className="flex-1 w-full min-h-[160px] bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-[13px] text-zinc-300 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 resize-none font-mono leading-relaxed transition-all shadow-inner"
                                                                             />
                                                                         </div>
                                                                     </div>
                                                                 </div>
 
                                                                 {/* RIGHT COLUMN: Output Buffer */}
-                                                                <div className="xl:col-span-7 flex flex-col gap-4">
+                                                                <div className="xl:col-span-7 flex flex-col gap-5">
                                                                     
                                                                     {/* Render Actions */}
-                                                                    <div className="flex items-center justify-between bg-zinc-900/60 p-2.5 rounded-xl border border-zinc-800/80">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="bg-zinc-700 border border-zinc-600 rounded-lg px-2 flex items-center gap-2">
-                                                                                <select value={shot.lighting || 'Cinematic Lighting'} onChange={(e) => updateShotLighting(scene.id, shot.id, e.target.value)} className="bg-transparent border-none text-[10px] font-bold text-white py-2 focus:outline-none appearance-none cursor-pointer">
-                                                                                    {LIGHTING_STYLES.map(o => <option key={o} value={o}>{o}</option>)}
+                                                                    <div className="flex flex-col sm:flex-row items-center justify-between bg-zinc-900/60 p-3 rounded-2xl border border-zinc-800/80 shadow-sm gap-4">
+                                                                        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                                                                            <div className="bg-zinc-700 hover:bg-zinc-600 transition-colors border border-zinc-600 rounded-xl px-3 flex items-center gap-2">
+                                                                                <select value={shot.lighting || 'Cinematic Lighting'} onChange={(e) => updateShotLighting(scene.id, shot.id, e.target.value)} className="bg-transparent border-none text-[11px] font-bold text-white py-2.5 focus:outline-none appearance-none cursor-pointer w-full">
+                                                                                    {LIGHTING_STYLES.map(o => <option key={o} value={o} className="bg-zinc-800 text-white">{o}</option>)}
                                                                                 </select>
                                                                             </div>
-                                                                            <div className="bg-zinc-700 border border-zinc-600 rounded-lg px-2 flex items-center gap-2">
-                                                                                <select value={shot.timeOfDay || 'Unspecified'} onChange={(e) => updateShotTimeOfDay(scene.id, shot.id, e.target.value)} className="bg-transparent border-none text-[10px] font-bold text-white py-2 focus:outline-none appearance-none cursor-pointer">
-                                                                                    {TIME_OF_DAY.map(o => <option key={o} value={o}>{o}</option>)}
+                                                                            <div className="bg-zinc-700 hover:bg-zinc-600 transition-colors border border-zinc-600 rounded-xl px-3 flex items-center gap-2">
+                                                                                <select value={shot.timeOfDay || 'Unspecified'} onChange={(e) => updateShotTimeOfDay(scene.id, shot.id, e.target.value)} className="bg-transparent border-none text-[11px] font-bold text-white py-2.5 focus:outline-none appearance-none cursor-pointer w-full">
+                                                                                    {TIME_OF_DAY.map(o => <option key={o} value={o} className="bg-zinc-800 text-white">{o}</option>)}
                                                                                 </select>
                                                                             </div>
-                                                                            <div className="bg-zinc-700 border border-zinc-600 rounded-lg px-2 flex items-center gap-2 hidden sm:flex">
-                                                                                <select value={shot.specialtyShot || 'None'} onChange={(e) => updateShotSpecialty(scene.id, shot.id, e.target.value)} className="bg-transparent border-none text-[10px] font-bold text-white py-2 focus:outline-none appearance-none cursor-pointer">
-                                                                                    {SPECIALTY_SHOTS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                                            <div className="bg-zinc-700 hover:bg-zinc-600 transition-colors border border-zinc-600 rounded-xl px-3 flex items-center gap-2 hidden sm:flex">
+                                                                                <select value={shot.specialtyShot || 'None'} onChange={(e) => updateShotSpecialty(scene.id, shot.id, e.target.value)} className="bg-transparent border-none text-[11px] font-bold text-white py-2.5 focus:outline-none appearance-none cursor-pointer w-full">
+                                                                                    {SPECIALTY_SHOTS.map(o => <option key={o} value={o} className="bg-zinc-800 text-white">{o}</option>)}
                                                                                 </select>
                                                                             </div>
                                                                         </div>
-                                                                        <button onClick={() => generateAIImage(scene.id, shot.id, shot)} disabled={isGenerating} className="bg-zinc-100 text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-md">
-                                                                            {isGenerating ? (
-                                                                                <><Loader2 className="w-4 h-4 animate-spin" /> Rendering</>
-                                                                            ) : hasImage ? (
-                                                                                <><RefreshCw className="w-4 h-4" /> Reroll Frame</>
-                                                                            ) : (
-                                                                                <><Camera className="w-4 h-4" /> Render Frame</>
+                                                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                                                            {hasImage && (
+                                                                                <button onClick={() => generateAIImage(scene.id, shot.id, shot, null, true)} disabled={isGenerating} className="bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-md">
+                                                                                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Update
+                                                                                </button>
                                                                             )}
-                                                                        </button>
+                                                                            <button onClick={() => generateAIImage(scene.id, shot.id, shot, null, false)} disabled={isGenerating} className="bg-zinc-100 text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-md">
+                                                                                {isGenerating ? (
+                                                                                    <><Loader2 className="w-4 h-4 animate-spin" /> Rendering</>
+                                                                                ) : hasImage ? (
+                                                                                    <><Wand2 className="w-4 h-4" /> New Reroll</>
+                                                                                ) : (
+                                                                                    <><Camera className="w-4 h-4" /> Render</>
+                                                                                )}
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
 
                                                                     {/* Image Buffer */}
-                                                                    <div className="rounded-xl border-2 border-zinc-800/80 bg-zinc-950 overflow-hidden relative flex items-center justify-center mx-auto shadow-2xl w-full" style={{ aspectRatio: aspectRatio.replace(':', '/'), maxHeight: '500px' }}>
+                                                                    <div className="rounded-2xl border-2 border-zinc-800/80 bg-zinc-950 overflow-hidden relative flex items-center justify-center mx-auto shadow-2xl w-full" style={{ aspectRatio: aspectRatio.replace(':', '/'), maxHeight: '600px' }}>
                                                                         {isGenerating && (
                                                                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-md z-10">
                                                                                 <div className="relative">
                                                                                     <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full animate-ping"></div>
-                                                                                    <Loader2 className="w-10 h-10 text-emerald-400 mb-4 animate-spin relative z-10" />
+                                                                                    <Loader2 className="w-12 h-12 text-emerald-400 mb-5 animate-spin relative z-10" />
                                                                                 </div>
-                                                                                <span className="text-xs font-black text-emerald-400 uppercase tracking-[0.2em]">Synthesizing Pixels</span>
+                                                                                <span className="text-sm font-black text-emerald-400 uppercase tracking-[0.2em]">Synthesizing Pixels</span>
                                                                             </div>
                                                                         )}
                                                                         {hasImage ? (
                                                                             <span className="w-full h-full flex items-center justify-center group/img">
                                                                                 <img src={generatedImages[frameId]} alt={`Frame ${shot.id}`} className="w-full h-full object-cover"/>
-                                                                                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/img:opacity-100 transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-sm">
-                                                                                    <button onClick={() => generateAIImage(scene.id, shot.id, shot)} className="bg-zinc-800 text-zinc-200 p-3 rounded-xl border border-zinc-700 hover:bg-zinc-700 hover:text-white transition-all transform hover:scale-105 shadow-xl" title="Reroll"><RefreshCw className="w-5 h-5" /></button>
-                                                                                    <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedImages[frameId], `frame_s${scene.id}_${shot.id}.png`); }} className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all transform hover:scale-105 shadow-xl" title="Download"><Download className="w-5 h-5" /></button>
-                                                                                    <button onClick={(e) => { e.preventDefault(); setFullscreenImage(generatedImages[frameId]); }} className="bg-blue-500/20 text-blue-400 p-3 rounded-xl border border-blue-500/30 hover:bg-blue-500/30 transition-all transform hover:scale-105 shadow-xl" title="View Fullscreen"><Maximize className="w-5 h-5" /></button>
+                                                                                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/img:opacity-100 transition-all duration-300 flex items-center justify-center gap-4 backdrop-blur-sm">
+                                                                                    <button onClick={() => generateAIImage(scene.id, shot.id, shot)} className="bg-zinc-800 text-zinc-200 p-4 rounded-xl border border-zinc-700 hover:bg-zinc-700 hover:text-white transition-all transform hover:scale-105 shadow-xl" title="Reroll"><RefreshCw className="w-6 h-6" /></button>
+                                                                                    <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedImages[frameId], `frame_s${scene.id}_${shot.id}.png`); }} className="bg-emerald-500/20 text-emerald-400 p-4 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all transform hover:scale-105 shadow-xl" title="Download"><Download className="w-6 h-6" /></button>
+                                                                                    <button onClick={(e) => { e.preventDefault(); setFullscreenImage(generatedImages[frameId]); }} className="bg-blue-500/20 text-blue-400 p-4 rounded-xl border border-blue-500/30 hover:bg-blue-500/30 transition-all transform hover:scale-105 shadow-xl" title="View Fullscreen"><Maximize className="w-6 h-6" /></button>
                                                                                 </div>
                                                                             </span>
                                                                         ) : (
-                                                                            <div className="flex flex-col items-center text-center p-8 opacity-20">
-                                                                                <div className="w-16 h-16 rounded-2xl bg-zinc-900 border-2 border-zinc-800 flex items-center justify-center mb-4"><ImageIcon className="w-8 h-8 text-zinc-500" /></div>
-                                                                                <span className="font-bold uppercase tracking-widest text-sm">Buffer Empty</span>
+                                                                            <div className="flex flex-col items-center text-center p-10 opacity-20">
+                                                                                <div className="w-20 h-20 rounded-3xl bg-zinc-900 border-2 border-zinc-800 flex items-center justify-center mb-5"><ImageIcon className="w-10 h-10 text-zinc-500" /></div>
+                                                                                <span className="font-bold uppercase tracking-widest text-base">Buffer Empty</span>
                                                                             </div>
                                                                         )}
                                                                     </div>
                                                                     
                                                                     {/* Post-Process Tools */}
                                                                     {hasImage && (
-                                                                        <div className="flex flex-col gap-4 mt-2">
-                                                                            <div className="flex flex-col xl:flex-row gap-3">
-                                                                                <div className="flex-1 bg-zinc-900/60 p-3.5 rounded-xl border border-zinc-800/80 flex flex-col items-center justify-center text-center gap-3 min-h-[120px]">
-                                                                                    <div className="p-2 bg-purple-500/10 rounded-full">
+                                                                        <div className="flex flex-col gap-5 mt-3">
+                                                                            
+                                                                            {/* End Frame Generation Panel */}
+                                                                            <div className="w-full bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80 shadow-sm flex flex-col gap-3">
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-1.5"><Video className="w-4 h-4 text-blue-400" /> Motion / End Frame</span>
+                                                                                        <span className="text-[10px] text-zinc-500 mt-0.5">Generate the final frame based on camera & artist movement</span>
+                                                                                    </div>
+                                                                                    <button 
+                                                                                        onClick={() => generateLastFrame(scene.id, shot.id, shot)} 
+                                                                                        disabled={generatingIds.has(makeLastFrameId(scene.id, shot.id))} 
+                                                                                        className="bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50 text-blue-400 px-4 py-2 rounded-xl text-[10px] font-bold tracking-widest uppercase flex items-center gap-2 border border-blue-500/30 transition-colors shrink-0"
+                                                                                    >
+                                                                                        {generatingIds.has(makeLastFrameId(scene.id, shot.id)) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Gen Last Frame
+                                                                                    </button>
+                                                                                </div>
+                                                                                
+                                                                                {generatedImages[makeLastFrameId(scene.id, shot.id)] ? (
+                                                                                    <div className="rounded-xl border border-zinc-800 bg-black overflow-hidden relative group/lastframe w-full mt-2" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
+                                                                                        <img src={generatedImages[makeLastFrameId(scene.id, shot.id)]} className="w-full h-full object-cover" alt="Last frame" />
+                                                                                        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-[10px] font-black text-white px-2 py-1 rounded tracking-widest border border-zinc-700">END FRAME</div>
+                                                                                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/lastframe:opacity-100 transition-all flex items-center justify-center gap-4 backdrop-blur-sm">
+                                                                                            <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedImages[makeLastFrameId(scene.id, shot.id)], `last_frame_s${scene.id}_${shot.id}.png`); }} className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all transform hover:scale-105 shadow-xl" title="Download"><Download className="w-5 h-5" /></button>
+                                                                                            <button onClick={(e) => { e.preventDefault(); setFullscreenImage(generatedImages[makeLastFrameId(scene.id, shot.id)]); }} className="bg-blue-500/20 text-blue-400 p-3 rounded-xl border border-blue-500/30 hover:bg-blue-500/30 transition-all transform hover:scale-105 shadow-xl" title="View Fullscreen"><Maximize className="w-5 h-5" /></button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ) : null}
+                                                                            </div>
+
+                                                                            <div className="flex flex-col xl:flex-row gap-4">
+                                                                                <div className="flex-1 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80 flex flex-col items-center justify-center text-center gap-3 min-h-[140px] shadow-sm">
+                                                                                    <div className="p-2.5 bg-purple-500/10 rounded-full">
                                                                                         <Paintbrush className="w-5 h-5 text-purple-400" />
                                                                                     </div>
-                                                                                    <div className="flex flex-col gap-0.5 w-full">
-                                                                                        <span className="text-[11px] font-black text-zinc-300 uppercase tracking-widest">Image Editor</span>
-                                                                                        <span className="text-[9px] text-zinc-500 leading-relaxed">Draw a mask or use text prompts</span>
+                                                                                    <div className="flex flex-col gap-1 w-full">
+                                                                                        <span className="text-[12px] font-black text-zinc-300 uppercase tracking-widest">Image Editor</span>
+                                                                                        <span className="text-[10px] text-zinc-500 leading-relaxed">Draw a mask or use text prompts</span>
                                                                                     </div>
                                                                                     <button 
                                                                                         onClick={() => setActiveInpainting({ sceneId: scene.id, shotId: shot.id, frameId, imageUrl: generatedImages[frameId] })}
-                                                                                        className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors shadow-md w-full mt-1 flex items-center justify-center gap-2"
+                                                                                        className="bg-purple-600 hover:bg-purple-500 text-white px-5 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors shadow-md w-full mt-2 flex items-center justify-center gap-2"
                                                                                     >
-                                                                                        <Paintbrush className="w-3.5 h-3.5" /> Open Paint Editor
+                                                                                        <Paintbrush className="w-4 h-4" /> Open Paint Editor
                                                                                     </button>
-                                                                                    <div className="w-full h-px bg-zinc-800/80 my-1"></div>
+                                                                                    <div className="w-full h-px bg-zinc-800/80 my-2"></div>
                                                                                     <div className="w-full flex gap-2">
                                                                                         <input
                                                                                             type="text"
@@ -6495,41 +5910,41 @@ CRITICAL RULES:
                                                                                             value={imageEditPrompts[frameId] || ''}
                                                                                             onChange={(e) => setImageEditPrompts(prev => ({ ...prev, [frameId]: e.target.value }))}
                                                                                             onKeyDown={(e) => { if (e.key === 'Enter') handleTextEdit(scene.id, shot.id, frameId); }}
-                                                                                            className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-[10px] text-zinc-300 focus:outline-none focus:border-purple-500/50"
+                                                                                            className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-purple-500/50"
                                                                                         />
                                                                                         <button
                                                                                             onClick={() => handleTextEdit(scene.id, shot.id, frameId)}
                                                                                             disabled={isGenerating || !(imageEditPrompts[frameId]?.trim())}
-                                                                                            className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-3 rounded-lg border border-purple-500/30 disabled:opacity-50 transition-colors flex items-center justify-center"
+                                                                                            className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-4 rounded-xl border border-purple-500/30 disabled:opacity-50 transition-colors flex items-center justify-center"
                                                                                             title="Apply text edit"
                                                                                         >
-                                                                                            {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                                                                                            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                                                                                         </button>
                                                                                     </div>
                                                                                 </div>
 
-                                                                                <div className="flex-1 bg-zinc-900/60 p-3.5 rounded-xl border border-zinc-800/80 flex flex-col gap-2.5">
+                                                                                <div className="flex-1 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80 flex flex-col gap-3 shadow-sm">
                                                                                     <div className="flex items-center justify-between">
-                                                                                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5"><MessageSquareQuote className="w-3.5 h-3.5" /> AI Director Suggestions</span>
-                                                                                        <button onClick={() => suggestShotAlternatives(scene.id, shot.id)} disabled={generatingIds.has(`alts-${frameId}`)} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-amber-400 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 border border-zinc-700 transition-colors">
+                                                                                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5"><MessageSquareQuote className="w-4 h-4" /> AI Director Suggestions</span>
+                                                                                        <button onClick={() => suggestShotAlternatives(scene.id, shot.id)} disabled={generatingIds.has(`alts-${frameId}`)} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-amber-400 px-4 py-2 rounded-xl text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 border border-zinc-700 transition-colors">
                                                                                             {generatingIds.has(`alts-${frameId}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />} Gen Ideas
                                                                                         </button>
                                                                                     </div>
                                                                                     {shot.aiIdeas ? (
-                                                                                        <div className="text-[10px] text-amber-300/80 font-mono overflow-y-auto max-h-[80px] custom-scrollbar whitespace-pre-wrap pr-1">{shot.aiIdeas}</div>
+                                                                                        <div className="text-[11px] text-amber-300/80 font-mono overflow-y-auto max-h-[100px] custom-scrollbar whitespace-pre-wrap pr-1">{shot.aiIdeas}</div>
                                                                                     ) : (
-                                                                                        <div className="flex items-center justify-center h-[60px] text-[10px] text-amber-500/30 font-mono italic">Need framing ideas? Click 'Gen Ideas'.</div>
+                                                                                        <div className="flex items-center justify-center h-[80px] text-[11px] text-amber-500/30 font-mono italic">Need framing ideas? Click 'Gen Ideas'.</div>
                                                                                     )}
                                                                                 </div>
                                                                             </div>
 
-                                                                            <div className="w-full bg-zinc-900/80 p-5 rounded-xl border border-emerald-900/30 flex flex-col gap-4 shadow-inner">
-                                                                                <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
-                                                                                    <span className="text-[11px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Telemetry & Technical Analysis</span>
+                                                                            <div className="w-full bg-zinc-900/80 p-6 rounded-2xl border border-emerald-900/30 flex flex-col gap-5 shadow-inner">
+                                                                                <div className="flex items-center justify-between border-b border-zinc-800/60 pb-4">
+                                                                                    <span className="text-[12px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2"><LayoutDashboard className="w-5 h-5" /> Telemetry & Technical Analysis</span>
                                                                                     <button 
                                                                                         onClick={() => generateTechBreakdown(scene.id, shot.id, shot)}
                                                                                         disabled={generatingIds.has(`breakdown-${frameId}`)}
-                                                                                        className="bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 text-emerald-400 px-4 py-2 rounded-lg text-xs font-bold tracking-widest uppercase flex items-center gap-2 border border-emerald-500/30 transition-colors shadow-sm"
+                                                                                        className="bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 text-emerald-400 px-5 py-2.5 rounded-xl text-[11px] font-bold tracking-widest uppercase flex items-center gap-2 border border-emerald-500/30 transition-colors shadow-sm"
                                                                                     >
                                                                                         {generatingIds.has(`breakdown-${frameId}`) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
                                                                                         Gen Dashboard
@@ -6538,16 +5953,16 @@ CRITICAL RULES:
                                                                                 
                                                                                 {generatedBreakdowns[frameId] ? (
                                                                                     <div className="rounded-xl border border-emerald-500/40 bg-black overflow-hidden relative group/dash shadow-lg w-full">
-                                                                                        <img src={generatedBreakdowns[frameId]} className="w-full h-auto max-h-[700px] object-contain" alt="Tech Specs Board" />
-                                                                                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/dash:opacity-100 transition-all flex items-center justify-center gap-3 backdrop-blur-sm">
-                                                                                            <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedBreakdowns[frameId], `tech_specs_s${scene.id}_${shot.id}.png`); }} className="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 hover:text-white px-6 py-3 rounded-xl border border-emerald-500/50 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all transform hover:scale-105 shadow-xl"><Download className="w-4 h-4" /> Download Full Res</button>
-                                                                                            <button onClick={(e) => { e.preventDefault(); setFullscreenImage(generatedBreakdowns[frameId]); }} className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 hover:text-white px-6 py-3 rounded-xl border border-blue-500/50 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all transform hover:scale-105 shadow-xl"><Maximize className="w-4 h-4" /> View Large</button>
+                                                                                        <img src={generatedBreakdowns[frameId]} className="w-full h-auto max-h-[800px] object-contain" alt="Tech Specs Board" />
+                                                                                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/dash:opacity-100 transition-all flex items-center justify-center gap-4 backdrop-blur-sm">
+                                                                                            <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedBreakdowns[frameId], `tech_specs_s${scene.id}_${shot.id}.png`); }} className="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 hover:text-white px-8 py-4 rounded-xl border border-emerald-500/50 font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all transform hover:scale-105 shadow-xl"><Download className="w-5 h-5" /> Download Full Res</button>
+                                                                                            <button onClick={(e) => { e.preventDefault(); setFullscreenImage(generatedBreakdowns[frameId]); }} className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 hover:text-white px-8 py-4 rounded-xl border border-blue-500/50 font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all transform hover:scale-105 shadow-xl"><Maximize className="w-5 h-5" /> View Large</button>
                                                                                         </div>
                                                                                     </div>
                                                                                 ) : (
-                                                                                    <div className="flex flex-col items-center justify-center h-[140px] bg-zinc-950 border border-dashed border-zinc-800/80 rounded-xl text-zinc-600">
-                                                                                        <Activity className="w-8 h-8 mb-3 opacity-40 text-emerald-500" />
-                                                                                        <span className="text-[10px] uppercase tracking-widest font-bold">No Telemetry Data Synthesized</span>
+                                                                                    <div className="flex flex-col items-center justify-center h-[160px] bg-zinc-950 border border-dashed border-zinc-800/80 rounded-2xl text-zinc-600">
+                                                                                        <Activity className="w-10 h-10 mb-4 opacity-40 text-emerald-500" />
+                                                                                        <span className="text-[11px] uppercase tracking-widest font-bold">No Telemetry Data Synthesized</span>
                                                                                     </div>
                                                                                 )}
                                                                             </div>
@@ -6557,61 +5972,61 @@ CRITICAL RULES:
                                                             </div>
                                                             
                                                             {/* Multi-Cam Coverage Section (Available for every shot) */}
-                                                            <div className="mt-6 pt-6 border-t border-zinc-800/60">
-                                                                <div className="flex items-center justify-between mb-4">
-                                                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                                                        <Video className="w-4 h-4 text-blue-500" /> Multi-Cam Variations
+                                                            <div className="mt-8 pt-8 border-t border-zinc-800/60">
+                                                                <div className="flex items-center justify-between mb-5">
+                                                                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                                                                        <Video className="w-5 h-5 text-blue-500" /> Multi-Cam Variations
                                                                     </span>
                                                                     <button
                                                                         onClick={() => generateShotMultiCamOptions(scene.id, shot.id)}
                                                                         disabled={generatingIds.has(`multicam-gen-${scene.id}-${shot.id}`)}
-                                                                        className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                                                        className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50"
                                                                     >
-                                                                        {generatingIds.has(`multicam-gen-${scene.id}-${shot.id}`) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Video className="w-3 h-3" />}
+                                                                        {generatingIds.has(`multicam-gen-${scene.id}-${shot.id}`) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
                                                                         Generate Coverage Angles
                                                                     </button>
                                                                 </div>
 
                                                                 {shot.multiCamOptions && shot.multiCamOptions.length > 0 && (
-                                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                                                         {shot.multiCamOptions.map(mc => {
-                                                                            const mcFrameId = `${scene.id}-${shot.id}-mc-${mc.id}`;
+                                                                            const mcFrameId = makeMcFrameId(scene.id, shot.id, mc.id);
                                                                             const isMcGen = generatingIds.has(mcFrameId);
                                                                             const hasMcImg = !!generatedImages[mcFrameId];
 
                                                                             return (
-                                                                                <div key={mc.id} className="bg-zinc-900 border border-zinc-800/80 rounded-xl p-3 flex flex-col gap-3">
+                                                                                <div key={mc.id} className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 flex flex-col gap-4 shadow-sm">
                                                                                     <div className="flex items-center justify-between">
-                                                                                        <span className="text-xs font-bold text-zinc-300 truncate pr-2">{mc.camLabel}</span>
+                                                                                        <span className="text-sm font-bold text-zinc-300 truncate pr-2">{mc.camLabel}</span>
                                                                                         <button
                                                                                             onClick={() => applyMultiCamAsFinal(scene.id, shot.id, mc)}
-                                                                                            className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors shrink-0"
+                                                                                            className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0"
                                                                                         >
                                                                                             Set as Final
                                                                                         </button>
                                                                                     </div>
-                                                                                    <div className="text-[10px] text-zinc-500 flex flex-col gap-1 font-mono">
+                                                                                    <div className="text-[11px] text-zinc-500 flex flex-col gap-1.5 font-mono">
                                                                                         <span className="truncate">{mc.type} | {mc.cameraAngle}</span>
                                                                                         <span className="truncate text-blue-400/70">{mc.lens}</span>
                                                                                     </div>
-                                                                                    <div className="rounded-lg bg-black relative flex items-center justify-center overflow-hidden border border-zinc-800 group/mcimg" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
-                                                                                        {isMcGen && <Loader2 className="w-6 h-6 text-emerald-400 animate-spin absolute z-10" />}
+                                                                                    <div className="rounded-xl bg-black relative flex items-center justify-center overflow-hidden border border-zinc-800 group/mcimg" style={{ aspectRatio: aspectRatio.replace(':', '/') }}>
+                                                                                        {isMcGen && <Loader2 className="w-8 h-8 text-emerald-400 animate-spin absolute z-10" />}
                                                                                         {hasMcImg ? (
                                                                                             <>
                                                                                                 <img src={generatedImages[mcFrameId]} className="w-full h-full object-cover" />
-                                                                                                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/mcimg:opacity-100 transition-all duration-300 flex items-center justify-center gap-2 backdrop-blur-sm">
-                                                                                                    <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedImages[mcFrameId], `mc_frame_s${scene.id}_${shot.id}.png`); }} className="bg-emerald-500/20 text-emerald-400 p-2 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all transform hover:scale-105 shadow-xl" title="Download"><Download className="w-4 h-4" /></button>
-                                                                                                    <button onClick={(e) => { e.preventDefault(); setFullscreenImage(generatedImages[mcFrameId]); }} className="bg-blue-500/20 text-blue-400 p-2 rounded-xl border border-blue-500/30 hover:bg-blue-500/30 transition-all transform hover:scale-105 shadow-xl" title="View Fullscreen"><Maximize className="w-4 h-4" /></button>
+                                                                                                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/mcimg:opacity-100 transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-sm">
+                                                                                                    <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedImages[mcFrameId], `mc_frame_s${scene.id}_${shot.id}.png`); }} className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all transform hover:scale-105 shadow-xl" title="Download"><Download className="w-4 h-4" /></button>
+                                                                                                    <button onClick={(e) => { e.preventDefault(); setFullscreenImage(generatedImages[mcFrameId]); }} className="bg-blue-500/20 text-blue-400 p-3 rounded-xl border border-blue-500/30 hover:bg-blue-500/30 transition-all transform hover:scale-105 shadow-xl" title="View Fullscreen"><Maximize className="w-4 h-4" /></button>
                                                                                                 </div>
                                                                                             </>
                                                                                         ) : (
-                                                                                            !isMcGen && <Video className="w-6 h-6 text-zinc-700" />
+                                                                                            !isMcGen && <Video className="w-8 h-8 text-zinc-700" />
                                                                                         )}
                                                                                     </div>
                                                                                     <button
                                                                                         onClick={() => generateAIImage(scene.id, shot.id, {...shot, ...mc}, mc.id)}
                                                                                         disabled={isMcGen}
-                                                                                        className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold uppercase py-2 rounded transition-colors w-full"
+                                                                                        className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold uppercase py-3 rounded-xl transition-colors w-full"
                                                                                     >
                                                                                         {hasMcImg ? 'Reroll Angle' : 'Render Angle'}
                                                                                     </button>
@@ -6621,89 +6036,89 @@ CRITICAL RULES:
                                                                     </div>
                                                                 )}
                                                             </div>
-
                                                         </div>
                                                     );
                                                 })
                                         )}
+                                        </div>
                                         
                                         {scene.shots.length > 0 && (
-                                            <div className="mt-8 pt-6 border-t border-[#1f1f1f] flex flex-col gap-8">
+                                            <div className="mt-10 pt-8 border-t border-[#1f1f1f] flex flex-col gap-10">
                                                 
                                                 {/* Costume & Prop Breakdown Chart Section */}
                                                 <div>
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                                            <Users className="w-4 h-4 text-purple-500" /> Costume & Prop Breakdown Chart
+                                                    <div className="flex items-center justify-between mb-5">
+                                                        <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                                                            <Users className="w-5 h-5 text-purple-500" /> Costume & Prop Breakdown Chart
                                                         </span>
                                                         <button 
                                                             onClick={() => generateCostumeBoard(scene.id)} 
                                                             disabled={generatingIds.has(`costume-board-${scene.id}`)}
-                                                            className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                                            className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50"
                                                         >
                                                             {generatingIds.has(`costume-board-${scene.id}`) ? (
-                                                                <><Loader2 className="w-3 h-3 animate-spin" /> Generating</>
+                                                                <><Loader2 className="w-4 h-4 animate-spin" /> Generating</>
                                                             ) : (
-                                                                <><Wand2 className="w-3 h-3" /> Gen Wardrobe Board</>
+                                                                <><Wand2 className="w-4 h-4" /> Gen Wardrobe Board</>
                                                             )}
                                                         </button>
                                                     </div>
                                                     
                                                     {generatedCostumeBoards[scene.id] ? (
-                                                        <div className="rounded-lg border border-purple-500/30 bg-[#000000] overflow-hidden relative group shadow-sm">
+                                                        <div className="rounded-xl border border-purple-500/30 bg-[#000000] overflow-hidden relative group shadow-lg">
                                                             <img src={generatedCostumeBoards[scene.id]} alt="Costume Board" className="w-full h-auto object-contain" />
-                                                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-sm">
-                                                                <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedCostumeBoards[scene.id], `costume_s${scene.id}.png`); }} className="bg-[#111] text-zinc-300 px-4 py-2.5 rounded-md border border-[#333] hover:bg-[#222] flex items-center gap-2 text-xs font-bold uppercase tracking-wider"><Download className="w-4 h-4" /> Download</button>
+                                                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+                                                                <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedCostumeBoards[scene.id], `costume_s${scene.id}.png`); }} className="bg-[#111] text-zinc-300 px-5 py-3 rounded-lg border border-[#333] hover:bg-[#222] flex items-center gap-2 text-sm font-bold uppercase tracking-wider"><Download className="w-5 h-5" /> Download</button>
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="bg-[#050505] border border-dashed border-[#1f1f1f] rounded-lg p-6 flex flex-col items-center justify-center text-center">
-                                                            <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">No Costume Board</span>
+                                                        <div className="bg-[#050505] border border-dashed border-[#1f1f1f] rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+                                                            <span className="text-[11px] text-zinc-600 uppercase tracking-widest font-bold">No Costume Board</span>
                                                         </div>
                                                     )}
                                                 </div>
 
                                                 {/* Compiled Boards Section */}
                                                 <div>
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                                            <Images className="w-4 h-4 text-emerald-500" /> Compiled Storyboards
+                                                    <div className="flex items-center justify-between mb-5">
+                                                        <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                                                            <Images className="w-5 h-5 text-emerald-500" /> Compiled Storyboards
                                                         </span>
                                                         <button 
                                                             onClick={() => generateCollages(scene.id)} 
                                                             disabled={generatingIds.has(`collages-${scene.id}`)}
-                                                            className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                                            className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50"
                                                         >
                                                             {generatingIds.has(`collages-${scene.id}`) ? (
-                                                                <><Loader2 className="w-3 h-3 animate-spin" /> Compiling</>
+                                                                <><Loader2 className="w-4 h-4 animate-spin" /> Compiling</>
                                                             ) : (
-                                                                <><Wand2 className="w-3 h-3" /> Gen Storyboard Grid</>
+                                                                <><Wand2 className="w-4 h-4" /> Gen Storyboard Grid</>
                                                             )}
                                                         </button>
                                                     </div>
                                                     
                                                     {generatedCollages[scene.id] && Array.isArray(generatedCollages[scene.id]) && generatedCollages[scene.id].length > 0 ? (
-                                                        <div className="space-y-4">
+                                                        <div className="space-y-5">
                                                             {generatedCollages[scene.id].map((collageSrc, idx) => (
-                                                                <div key={idx} className="rounded-lg border border-emerald-500/30 bg-[#000000] overflow-hidden relative group shadow-sm">
-                                                                    <div className="absolute top-2 left-2 bg-[#050505]/90 text-zinc-400 px-2 py-0.5 rounded text-[9px] font-bold tracking-widest border border-[#222] z-10">Grid Part {idx + 1}</div>
+                                                                <div key={idx} className="rounded-xl border border-emerald-500/30 bg-[#000000] overflow-hidden relative group shadow-lg">
+                                                                    <div className="absolute top-3 left-3 bg-[#050505]/90 text-zinc-400 px-3 py-1 rounded text-[10px] font-bold tracking-widest border border-[#222] z-10">Grid Part {idx + 1}</div>
                                                                     <img src={collageSrc} alt={`Board ${idx + 1}`} className="w-full h-auto object-contain" />
-                                                                    <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-sm">
-                                                                        <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(collageSrc, `board_s${scene.id}_${idx+1}.png`); }} className="bg-[#111] text-zinc-300 px-4 py-2.5 rounded-md border border-[#333] hover:bg-[#222] flex items-center gap-2 text-xs font-bold uppercase tracking-wider"><Download className="w-4 h-4" /> Download</button>
+                                                                    <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+                                                                        <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(collageSrc, `board_s${scene.id}_${idx+1}.png`); }} className="bg-[#111] text-zinc-300 px-5 py-3 rounded-lg border border-[#333] hover:bg-[#222] flex items-center gap-2 text-sm font-bold uppercase tracking-wider"><Download className="w-5 h-5" /> Download</button>
                                                                     </div>
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     ) : generatedCollages[scene.id] && typeof generatedCollages[scene.id] === 'string' ? (
-                                                        <div className="rounded-lg border border-emerald-500/30 bg-[#000000] overflow-hidden relative group shadow-sm">
+                                                        <div className="rounded-xl border border-emerald-500/30 bg-[#000000] overflow-hidden relative group shadow-lg">
                                                             <img src={generatedCollages[scene.id]} alt={`Board`} className="w-full h-auto object-contain" />
-                                                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-sm">
-                                                                <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedCollages[scene.id], `board_s${scene.id}.png`); }} className="bg-[#111] text-zinc-300 px-4 py-2.5 rounded-md border border-[#333] hover:bg-[#222] flex items-center gap-2 text-xs font-bold uppercase tracking-wider"><Download className="w-4 h-4" /> Download</button>
+                                                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+                                                                <button onClick={(e) => { e.preventDefault(); handleDownloadSingleImage(generatedCollages[scene.id], `board_s${scene.id}.png`); }} className="bg-[#111] text-zinc-300 px-5 py-3 rounded-lg border border-[#333] hover:bg-[#222] flex items-center gap-2 text-sm font-bold uppercase tracking-wider"><Download className="w-5 h-5" /> Download</button>
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="bg-[#050505] border border-dashed border-[#1f1f1f] rounded-lg p-6 flex flex-col items-center justify-center text-center">
-                                                            <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Awaiting Compilation</span>
+                                                        <div className="bg-[#050505] border border-dashed border-[#1f1f1f] rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+                                                            <span className="text-[11px] text-zinc-600 uppercase tracking-widest font-bold">Awaiting Compilation</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -6711,15 +6126,14 @@ CRITICAL RULES:
                                             </div>
                                         )}
                                     </div>
-                                </div>
                             ))
                             )}
                         </div>
-
                     </div>
-                </div>
+                )}
+            </div>
 
-                {/* Fullscreen Slider Overlay */}
+            {/* Fullscreen Slider Overlay */}
                 {showAppSlider && (
                     <div className="fixed inset-0 z-[100] bg-zinc-950 flex flex-col backdrop-blur-3xl">
                         <div className="flex items-center justify-between p-5 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
@@ -6733,10 +6147,18 @@ CRITICAL RULES:
                                 </div>
                             </div>
                             <div className="flex items-center gap-6">
+                                <button
+                                    onClick={() => setIsAnimaticPlaying(v => !v)}
+                                    disabled={sliderFrames.length === 0}
+                                    className={`p-3 rounded-xl border transition-all shadow-sm disabled:opacity-40 ${isAnimaticPlaying ? 'bg-emerald-500 border-emerald-400 text-zinc-950' : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'}`}
+                                    title={isAnimaticPlaying ? 'Pause animatic' : 'Play animatic (uses each shot duration)'}
+                                >
+                                    {isAnimaticPlaying ? <Square className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                                </button>
                                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 shadow-inner">
                                     <span className="text-sm font-black text-zinc-300 font-mono">{sliderFrames.length > 0 ? sliderIndex + 1 : 0} <span className="text-zinc-600">/ {sliderFrames.length}</span></span>
                                 </div>
-                                <button onClick={() => setShowAppSlider(false)} className="bg-zinc-900 hover:bg-zinc-800 hover:text-white border border-zinc-800 text-zinc-400 p-3 rounded-xl transition-all shadow-sm">
+                                <button onClick={() => { setIsAnimaticPlaying(false); setShowAppSlider(false); }} className="bg-zinc-900 hover:bg-zinc-800 hover:text-white border border-zinc-800 text-zinc-400 p-3 rounded-xl transition-all shadow-sm">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
@@ -6822,7 +6244,48 @@ CRITICAL RULES:
                     </div>
                 )}
 
+                {/* Actor Match Confirmation Modal */}
+                {pendingActorMatch && (
+                    <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+                        <div className="bg-zinc-900 border border-emerald-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Sparkles className="text-emerald-400 w-6 h-6" />
+                                <h3 className="text-xl font-black text-white uppercase tracking-widest">Actor Match Found</h3>
+                            </div>
+                            
+                            {pendingActorMatch.imageDatas && pendingActorMatch.imageDatas.length > 0 && (
+                                <img src={pendingActorMatch.imageDatas[0].url} className="w-full h-48 object-cover rounded-xl mb-4 border border-zinc-700" alt="Detected face" />
+                            )}
+                            
+                            <p className="text-zinc-300 text-sm mb-4 leading-relaxed">
+                                We identified <strong className="text-emerald-400">{pendingActorMatch.detectedInfo.name}</strong>. Do you want to automatically link this actor's identity and visual traits to this character profile?
+                            </p>
+                            
+                            <div className="bg-zinc-950 rounded-xl p-4 text-xs font-mono text-zinc-400 mb-6 space-y-2">
+                                <p><span className="text-zinc-500 font-bold uppercase">Name:</span> {pendingActorMatch.detectedInfo.name}</p>
+                                <p><span className="text-zinc-500 font-bold uppercase">Gender:</span> {pendingActorMatch.detectedInfo.gender}</p>
+                                <p><span className="text-zinc-500 font-bold uppercase">Age:</span> {pendingActorMatch.detectedInfo.age}</p>
+                                <p><span className="text-zinc-500 font-bold uppercase">Traits:</span> {pendingActorMatch.detectedInfo.traits}</p>
+                            </div>
+                            
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={() => handleConfirmActorMatch(true)} 
+                                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <UserPlus className="w-4 h-4" /> Yes, Link Actor Profile
+                                </button>
+                                <button 
+                                    onClick={() => handleConfirmActorMatch(false)} 
+                                    className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-3 px-4 rounded-xl transition-colors"
+                                >
+                                    No, Keep Original Inputs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </div>
-        </div>
     );
 }
