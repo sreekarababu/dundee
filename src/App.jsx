@@ -21,10 +21,13 @@ window.fetch = async (url, options) => {
             let promptText = '';
             const parts = optionsBody.contents?.[0]?.parts;
             if (Array.isArray(parts)) {
-                promptText = parts
-                    .filter(p => p.text)
-                    .map(p => p.text)
-                    .join('\n');
+                const textParts = parts.filter(p => p.text && typeof p.text === 'string');
+                if (textParts.length > 0) {
+                    let lastText = textParts[textParts.length - 1].text;
+                    // Strip the internal variation seed to keep the prompt clean
+                    lastText = lastText.replace(/\n\n\[Internal Variation Seed: \d+\]/gi, '').trim();
+                    promptText = lastText;
+                }
             }
             
             if (!promptText) {
