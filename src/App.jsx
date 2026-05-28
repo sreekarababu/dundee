@@ -8,6 +8,113 @@ import {
     User, Box, Crosshair, Navigation, Lightbulb, Star, Maximize, Paintbrush, Eraser, Search, ScanFace
 } from 'lucide-react';
 
+const originalFetch = window.fetch;
+window.fetch = async (url, options) => {
+    if (typeof url === 'string' && url.includes('gemini-2.5-flash-image-preview')) {
+        try {
+            console.log("INTERCEPTING IMAGE GENERATION FOR IMAGEROUTER.IO");
+            let optionsBody = {};
+            if (options && options.body) {
+                optionsBody = JSON.parse(options.body);
+            }
+            
+            let promptText = '';
+            const parts = optionsBody.contents?.[0]?.parts;
+            if (Array.isArray(parts)) {
+                promptText = parts
+                    .filter(p => p.text)
+                    .map(p => p.text)
+                    .join('\n');
+            }
+            
+            if (!promptText) {
+                promptText = "cinematic scene, high quality, masterpiece";
+            }
+            
+            let size = "1024x1024";
+            const apiAspectRatio = optionsBody.generationConfig?.imageConfig?.aspectRatio || "1:1";
+            if (apiAspectRatio === "16:9") {
+                size = "1024x576";
+            } else if (apiAspectRatio === "9:16") {
+                size = "576x1024";
+            } else if (apiAspectRatio === "4:3") {
+                size = "1024x768";
+            } else if (apiAspectRatio === "3:4") {
+                size = "768x1024";
+            }
+            
+            const routerKey = "16c88c0ad44d20615af764b5c41e5edd0f52bcda76796dd32f6f6e9834b1b6dc";
+            const routerModel = "black-forest-labs/flux-schnell";
+            const imagerouterUrl = "https://api.imagerouter.io/v1/openai/images/generations";
+            
+            console.log("Calling imagerouter.io with size:", size, "model:", routerModel);
+            
+            const imagerouterResp = await originalFetch(imagerouterUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${routerKey}`
+                },
+                body: JSON.stringify({
+                    prompt: promptText,
+                    model: routerModel,
+                    size: size,
+                    response_format: "b64_json"
+                })
+            });
+            
+            if (!imagerouterResp.ok) {
+                const errText = await imagerouterResp.text();
+                console.error("imagerouter.io failed:", errText);
+                throw new Error("ImageRouter Error: " + errText);
+            }
+            
+            const routerResult = await imagerouterResp.json();
+            const b64Data = routerResult.data?.[0]?.b64_json || await (async () => {
+                const imgUrl = routerResult.data?.[0]?.url;
+                if (!imgUrl) throw new Error("No image data returned from ImageRouter");
+                const imgResp = await originalFetch(imgUrl);
+                const buffer = await imgResp.arrayBuffer();
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return window.btoa(binary);
+            })();
+            
+            const geminiResponse = {
+                candidates: [{
+                    content: {
+                        parts: [{
+                            inlineData: {
+                                mimeType: "image/png",
+                                data: b64Data
+                            }
+                        }]
+                    }
+                }]
+            };
+            
+            return new Response(JSON.stringify(geminiResponse), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+        } catch (e) {
+            console.error("ImageRouter Interceptor Error:", e);
+            return new Response(JSON.stringify({
+                error: { message: "ImageRouter proxy failed: " + e.message }
+            }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    }
+    return originalFetch(url, options);
+};
+
 const INITIAL_SCENES = [];
 
 const extractFramesFromVideo = (file, numFrames = 4) => {
