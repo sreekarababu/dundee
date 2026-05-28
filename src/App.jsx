@@ -713,6 +713,21 @@ const ShotOrderInput = ({ shot, sceneId, updateShotOrder }) => {
 };
 
 export default function App() {
+    const [isAppUnlocked, setIsAppUnlocked] = useState(() => sessionStorage.getItem('app_unlocked') === 'true');
+    const [loginUser, setLoginUser] = useState('');
+    const [loginPass, setLoginPass] = useState('');
+    const [loginError, setLoginError] = useState('');
+
+    const handleLoginSubmit = (e) => {
+        e.preventDefault();
+        if (loginUser === 'admin' && loginPass === 'test') {
+            setIsAppUnlocked(true);
+            sessionStorage.setItem('app_unlocked', 'true');
+        } else {
+            setLoginError('Invalid user ID or password. Please try again.');
+        }
+    };
+
     const [script, setScript] = useState('');
     const [parsedScenes, setParsedScenes] = useState(INITIAL_SCENES);
     const parsedScenesRef = useRef(INITIAL_SCENES);
@@ -4660,6 +4675,67 @@ CRITICAL RULES:
             return { ...scene, shots: scene.shots.filter(s => s.id !== shotId) };
         }));
     };
+
+    if (!isAppUnlocked) {
+        return (
+            <div className="bg-zinc-950 text-zinc-300 font-sans antialiased min-h-screen flex items-center justify-center p-4 relative overflow-hidden selection:bg-zinc-700 selection:text-white">
+                {/* Background decorative blur elements */}
+                <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
+                <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
+
+                <div className="w-full max-w-md relative z-10">
+                    <div className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/85 rounded-3xl p-8 shadow-2xl flex flex-col gap-6">
+                        <div className="flex flex-col items-center gap-3 text-center">
+                            <div className="w-16 h-16 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/15">
+                                <Clapperboard className="w-8 h-8 text-white animate-pulse" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-black text-white tracking-tight bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">Dundee Pre-Viz Studio</h1>
+                                <p className="text-xs text-zinc-500 font-semibold uppercase tracking-widest mt-1">Workspace Authentication</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleLoginSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">User ID</label>
+                                <input 
+                                    type="text" 
+                                    value={loginUser}
+                                    onChange={(e) => setLoginUser(e.target.value)}
+                                    placeholder="Enter your User ID..."
+                                    className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-zinc-200 transition-all placeholder:text-zinc-600"
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Password</label>
+                                <input 
+                                    type="password" 
+                                    value={loginPass}
+                                    onChange={(e) => setLoginPass(e.target.value)}
+                                    placeholder="Enter your Password..."
+                                    className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-zinc-200 transition-all placeholder:text-zinc-600"
+                                    required
+                                />
+                            </div>
+
+                            {loginError && (
+                                <p className="text-xs text-red-400 font-medium leading-relaxed bg-red-950/30 border border-red-900/50 px-3.5 py-2.5 rounded-xl">{loginError}</p>
+                            )}
+
+                            <button 
+                                type="submit"
+                                className="w-full bg-zinc-100 hover:bg-white active:scale-[0.98] text-zinc-950 font-bold rounded-xl py-3 text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md shadow-black/10 mt-6"
+                            >
+                                <Play className="w-4 h-4 text-zinc-950 fill-zinc-950" /> Access Studio
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-zinc-950 text-zinc-300 font-sans antialiased h-screen overflow-y-auto overflow-x-hidden flex flex-col w-full relative selection:bg-zinc-700 custom-scrollbar">
