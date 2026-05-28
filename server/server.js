@@ -111,6 +111,116 @@ app.post('/api/gemini/predict', verifyToken, async (req, res) => {
     }
 });
 
+// Proxy endpoint for image generation (bypasses browser CORS & firewalls)
+app.post('/api/generate-image', async (req, res) => {
+    try {
+        const { prompt, model, width, height } = req.body;
+        
+        const routerKey = "16c88c0ad44d20615af764b5c41e5edd0f52bcda76796dd32f6f6e9834b1b6dc";
+        const routerModel = model || "google/nano-banana-2:free";
+        const w = width || 1024;
+        const h = height || 1024;
+        
+        let b64Data = '';
+        let success = false;
+        
+        // 1. Try ImageRouter first
+        try {
+            console.log(`[Backend Proxy] Calling ImageRouter for model: ${routerModel}`);
+            const imagerouterUrl = "https://api.imagerouter.io/v1/openai/images/generations";
+            
+            // Check if key supports the request by passing correct size constraint
+            const routerResp = await fetch(imagerouterUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${routerKey}`
+                },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    model: routerModel,
+                    size: routerModel.includes("nano-banana-2") ? "512x512" : `${w}x${h}`
+                })
+            });
+            
+            if (routerResp.ok) {
+                const routerResult = await routerResp.json();
+                if (!routerResult.error) {
+                    const imgUrl = routerResult.data?.[0]?.url;
+                    const imgB64 = routerResult.data?.[0]?.b64_json;
+                    
+                    if (imgB64) {
+                        b64Data = imgB64;
+                        success = true;
+                    } else if (imgUrl) {
+                        const imgResp = await fetch(imgUrl);
+                        const buffer = await imgResp.arrayBuffer();
+                        b64Data = Buffer.from(buffer).toString('base64');
+                        success = true;
+                    }
+                } else {
+                    console.warn("[Backend Proxy] ImageRouter returned JSON error:", routerResult.error);
+                }
+            } else {
+                const errText = await routerResp.text();
+                console.warn(`[Backend Proxy] ImageRouter responded with status ${routerResp.status}:`, errText);
+            }
+        } catch (routerErr) {
+            console.warn("[Backend Proxy] ImageRouter call failed:", routerErr.message);
+        }
+        
+        // 2. Try Pollinations.ai fallback
+        if (!success) {
+            try {
+                let safePrompt = prompt;
+                if (safePrompt.length > 600) {
+                    safePrompt = safePrompt.substring(0, 600) + "... cinematic masterpiece";
+                }
+                const pollPrompt = encodeURIComponent(safePrompt);
+                const pollUrl = `https://image.pollinations.ai/prompt/${pollPrompt}?width=${w}&height=${h}&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
+                
+                console.log("[Backend Proxy] Falling back to Pollinations.ai:", pollUrl);
+                const pollResp = await fetch(pollUrl);
+                if (pollResp.ok) {
+                    const buffer = await pollResp.arrayBuffer();
+                    b64Data = Buffer.from(buffer).toString('base64');
+                    success = true;
+                } else {
+                    console.warn(`[Backend Proxy] Pollinations returned status ${pollResp.status}`);
+                }
+            } catch (pollErr) {
+                console.warn("[Backend Proxy] Pollinations.ai fallback failed:", pollErr.message);
+            }
+        }
+        
+        // 3. Try Picsum Photos fallback (keeps a beautiful placeholder, but should only be hit if network is down)
+        if (!success) {
+            try {
+                const picsumUrl = `https://picsum.photos/seed/${Math.floor(Math.random() * 100000)}/${w}/${h}`;
+                console.log("[Backend Proxy] Falling back to Picsum Photos:", picsumUrl);
+                const picsumResp = await fetch(picsumUrl);
+                if (picsumResp.ok) {
+                    const buffer = await picsumResp.arrayBuffer();
+                    b64Data = Buffer.from(buffer).toString('base64');
+                    success = true;
+                }
+            } catch (picsumErr) {
+                console.warn("[Backend Proxy] Picsum Photos fallback failed:", picsumErr.message);
+            }
+        }
+        
+        if (success && b64Data) {
+            res.json({ data: [{ b64_json: b64Data }] });
+        } else {
+            res.status(500).json({ error: { message: "All image generation sources failed." } });
+        }
+        
+    } catch (e) {
+        console.error("[Backend Proxy] Global error:", e);
+        res.status(500).json({ error: { message: e.message } });
+    }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Secure proxy server running on http://localhost:${PORT}`);

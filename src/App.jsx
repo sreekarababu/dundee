@@ -12,7 +12,7 @@ const originalFetch = window.fetch;
 window.fetch = async (url, options) => {
     if (typeof url === 'string' && url.includes('gemini-2.5-flash-image-preview')) {
         try {
-            console.log("INTERCEPTING IMAGE GENERATION FOR IMAGEROUTER.IO");
+            console.log("INTERCEPTING IMAGE GENERATION FOR BACKEND PROXY");
             let optionsBody = {};
             if (options && options.body) {
                 optionsBody = JSON.parse(options.body);
@@ -34,148 +34,70 @@ window.fetch = async (url, options) => {
                 promptText = "cinematic scene, high quality, masterpiece";
             }
             
-            let size = "1024x1024";
+            let w = 1024, h = 1024;
             const apiAspectRatio = optionsBody.generationConfig?.imageConfig?.aspectRatio || "1:1";
-            if (apiAspectRatio === "16:9") {
-                size = "1024x576";
-            } else if (apiAspectRatio === "9:16") {
-                size = "576x1024";
-            } else if (apiAspectRatio === "4:3") {
-                size = "1024x768";
-            } else if (apiAspectRatio === "3:4") {
-                size = "768x1024";
-            }
+            if (apiAspectRatio === "16:9") { w = 1024; h = 576; }
+            else if (apiAspectRatio === "9:16") { w = 576; h = 1024; }
+            else if (apiAspectRatio === "4:3") { w = 1024; h = 768; }
+            else if (apiAspectRatio === "3:4") { w = 768; h = 1024; }
             
-            const routerKey = "16c88c0ad44d20615af764b5c41e5edd0f52bcda76796dd32f6f6e9834b1b6dc";
             const routerModel = "google/nano-banana-2:free";
-            if (routerModel.includes("nano-banana-2")) {
-                size = "512x512";
+            const proxyUrl = "http://localhost:3001/api/generate-image";
+            
+            console.log("Calling backend proxy for image generation...");
+            const proxyResp = await originalFetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prompt: promptText,
+                    model: routerModel,
+                    width: w,
+                    height: h
+                })
+            });
+            
+            if (!proxyResp.ok) {
+                throw new Error(`Backend proxy returned status ${proxyResp.status}`);
             }
-            const imagerouterUrl = "https://api.imagerouter.io/v1/openai/images/generations";
             
-            console.log("Calling imagerouter.io with size:", size, "model:", routerModel);
+            const proxyResult = await proxyResp.json();
+            const b64Data = proxyResult.data?.[0]?.b64_json;
+            if (!b64Data) {
+                throw new Error("No image data returned from backend proxy");
+            }
             
-            let useFallback = false;
-            let b64Data = '';
-            
-            try {
-                const imagerouterResp = await originalFetch(imagerouterUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${routerKey}`
-                    },
-                    body: JSON.stringify({
-                        prompt: promptText,
-                        model: routerModel
-                    })
-                });
-                
-                if (imagerouterResp.ok) {
-                    const routerResult = await imagerouterResp.json();
-                    if (routerResult.error) {
-                        console.warn("ImageRouter returned error inside JSON:", routerResult.error);
-                        useFallback = true;
-                    } else {
-                        b64Data = routerResult.data?.[0]?.b64_json || await (async () => {
-                            const imgUrl = routerResult.data?.[0]?.url;
-                            if (!imgUrl) throw new Error("No image data");
-                            const imgResp = await originalFetch(imgUrl);
-                            const buffer = await imgResp.arrayBuffer();
-                            let binary = '';
-                            const bytes = new Uint8Array(buffer);
-                            for (let i = 0; i < bytes.byteLength; i++) {
-                                binary += String.fromCharCode(bytes[i]);
+            const geminiResponse = {
+                candidates: [{
+                    content: {
+                        parts: [{
+                            inlineData: {
+                                mimeType: "image/png",
+                                data: b64Data
                             }
-                            return window.btoa(binary);
-                        })();
+                        }]
                     }
-                } else {
-                    const errText = await imagerouterResp.text();
-                    console.warn("ImageRouter response status not OK:", imagerouterResp.status, errText);
-                    useFallback = true;
-                }
-            } catch (routerErr) {
-                console.warn("ImageRouter request threw error:", routerErr);
-                useFallback = true;
-            }
+                }]
+            };
             
-            if (useFallback || !b64Data) {
-                console.log("FALLING BACK TO POLLINATIONS.AI (FREE MULTIPLEXER)");
-                let w = 1024, h = 1024;
-                if (apiAspectRatio === "16:9") { w = 1024; h = 576; }
-                else if (apiAspectRatio === "9:16") { w = 576; h = 1024; }
-                else if (apiAspectRatio === "4:3") { w = 1024; h = 768; }
-                else if (apiAspectRatio === "3:4") { w = 768; h = 1024; }
-                
-                let safePromptText = promptText;
-                if (safePromptText.length > 600) {
-                    safePromptText = safePromptText.substring(0, 600) + "... cinematic masterpiece";
-                }
-
-                try {
-                    const pollPrompt = encodeURIComponent(safePromptText);
-                    const pollUrl = `https://image.pollinations.ai/prompt/${pollPrompt}?width=${w}&height=${h}&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
-                    console.log("Attempting Pollinations.ai fetch:", pollUrl);
-                    const pollResp = await originalFetch(pollUrl);
-                    if (!pollResp.ok) {
-                        throw new Error(`Pollinations returned status ${pollResp.status}`);
-                    }
-                    const buffer = await pollResp.arrayBuffer();
-                    let binary = '';
-                    const bytes = new Uint8Array(buffer);
-                    for (let i = 0; i < bytes.byteLength; i++) {
-                        binary += String.fromCharCode(bytes[i]);
-                    }
-                    b64Data = window.btoa(binary);
-                    console.log("Pollinations.ai fallback successful!");
-                } catch (pollErr) {
-                    console.warn("Pollinations.ai failed, trying Picsum Photos fallback...", pollErr);
-                    try {
-                        const picsumUrl = `https://picsum.photos/seed/${Math.floor(Math.random() * 100000)}/${w}/${h}`;
-                        console.log("Attempting Picsum Photos fetch:", picsumUrl);
-                        const picsumResp = await originalFetch(picsumUrl);
-                        if (!picsumResp.ok) {
-                            throw new Error(`Picsum returned status ${picsumResp.status}`);
-                        }
-                        const buffer = await picsumResp.arrayBuffer();
-                        let binary = '';
-                        const bytes = new Uint8Array(buffer);
-                        for (let i = 0; i < bytes.byteLength; i++) {
-                            binary += String.fromCharCode(bytes[i]);
-                        }
-                        b64Data = window.btoa(binary);
-                        console.log("Picsum Photos fallback successful!");
-                    } catch (picsumErr) {
-                        console.warn("Picsum Photos failed, generating premium SVG fallback...", picsumErr);
-                        const cleanPrompt = safePromptText.substring(0, 30).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                        const svgString = `
-                            <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#09090b" />
-                                        <stop offset="50%" stop-color="#18181b" />
-                                        <stop offset="100%" stop-color="#27272a" />
-                                    </linearGradient>
-                                    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stop-color="#a855f7" />
-                                        <stop offset="100%" stop-color="#06b6d4" />
-                                    </linearGradient>
-                                </defs>
-                                <rect width="100%" height="100%" fill="url(#bgGrad)" />
-                                <rect x="20" y="20" width="${w - 40}" height="${h - 40}" rx="16" fill="none" stroke="url(#glowGrad)" stroke-width="1.5" opacity="0.3" />
-                                <circle cx="${w / 2}" cy="${h / 2 - 30}" r="40" fill="#1e1b4b" stroke="url(#glowGrad)" stroke-width="2" />
-                                <path d="M${w / 2 - 15} ${h / 2 - 45} L${w / 2 + 15} ${h / 2 - 45} L${w / 2 + 25} ${h / 2 - 30} L${w / 2 - 25} ${h / 2 - 30} Z" fill="#a855f7" opacity="0.8" />
-                                <rect x="${w / 2 - 25}" y="${h / 2 - 30}" width="50" height="30" rx="4" fill="#06b6d4" opacity="0.8" />
-                                <circle cx="${w / 2}" cy="${h / 2 - 15}" r="8" fill="#09090b" />
-                                <text x="50%" y="${h / 2 + 40}" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f4f4f5" letter-spacing="2">VISUALIZATION ACTIVE</text>
-                                <text x="50%" y="${h / 2 + 65}" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#71717a" letter-spacing="1">API Offline • ${cleanPrompt}...</text>
-                            </svg>
-                        `.trim().replace(/\s+/g, ' ');
-                        b64Data = window.btoa(unescape(encodeURIComponent(svgString)));
-                    }
-                }
-            }
+            return new Response(JSON.stringify(geminiResponse), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+        } catch (e) {
+            console.error("Image Generation Interceptor Error:", e);
+            return new Response(JSON.stringify({
+                error: { message: "Image generation failed: " + e.message }
+            }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    }
+    return originalFetch(url, options);
+};
 
             
             const geminiResponse = {
