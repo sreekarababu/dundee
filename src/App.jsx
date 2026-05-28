@@ -870,7 +870,7 @@ export default function App() {
     const [directorSearchResults, setDirectorSearchResults] = useState([]);
     const [isSearchingDirector, setIsSearchingDirector] = useState(false);
     const [scriptLanguage, setScriptLanguage] = useState('Auto-Detect Native Language');
-    const apiKey = ''; // Automatically provided by the environment at runtime
+    const apiKey = 'AIzaSyBwWqYggIMOEk4ftwYa3D1mvZpyxdBRCk0'; // User-provided text API key
 
     const GEMINI_TEXT_MODEL = 'gemini-2.5-flash-preview-09-2025';
     const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image-preview';
