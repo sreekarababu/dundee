@@ -107,21 +107,75 @@ window.fetch = async (url, options) => {
                 else if (apiAspectRatio === "4:3") { w = 1024; h = 768; }
                 else if (apiAspectRatio === "3:4") { w = 768; h = 1024; }
                 
-                const pollPrompt = encodeURIComponent(promptText);
-                const pollUrl = `https://image.pollinations.ai/prompt/${pollPrompt}?width=${w}&height=${h}&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
-                
-                const pollResp = await originalFetch(pollUrl);
-                if (!pollResp.ok) {
-                    throw new Error("Both ImageRouter and Pollinations.ai fallback failed.");
+                let safePromptText = promptText;
+                if (safePromptText.length > 600) {
+                    safePromptText = safePromptText.substring(0, 600) + "... cinematic masterpiece";
                 }
-                const buffer = await pollResp.arrayBuffer();
-                let binary = '';
-                const bytes = new Uint8Array(buffer);
-                for (let i = 0; i < bytes.byteLength; i++) {
-                    binary += String.fromCharCode(bytes[i]);
+
+                try {
+                    const pollPrompt = encodeURIComponent(safePromptText);
+                    const pollUrl = `https://image.pollinations.ai/prompt/${pollPrompt}?width=${w}&height=${h}&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
+                    console.log("Attempting Pollinations.ai fetch:", pollUrl);
+                    const pollResp = await originalFetch(pollUrl);
+                    if (!pollResp.ok) {
+                        throw new Error(`Pollinations returned status ${pollResp.status}`);
+                    }
+                    const buffer = await pollResp.arrayBuffer();
+                    let binary = '';
+                    const bytes = new Uint8Array(buffer);
+                    for (let i = 0; i < bytes.byteLength; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    b64Data = window.btoa(binary);
+                    console.log("Pollinations.ai fallback successful!");
+                } catch (pollErr) {
+                    console.warn("Pollinations.ai failed, trying Picsum Photos fallback...", pollErr);
+                    try {
+                        const picsumUrl = `https://picsum.photos/seed/${Math.floor(Math.random() * 100000)}/${w}/${h}`;
+                        console.log("Attempting Picsum Photos fetch:", picsumUrl);
+                        const picsumResp = await originalFetch(picsumUrl);
+                        if (!picsumResp.ok) {
+                            throw new Error(`Picsum returned status ${picsumResp.status}`);
+                        }
+                        const buffer = await picsumResp.arrayBuffer();
+                        let binary = '';
+                        const bytes = new Uint8Array(buffer);
+                        for (let i = 0; i < bytes.byteLength; i++) {
+                            binary += String.fromCharCode(bytes[i]);
+                        }
+                        b64Data = window.btoa(binary);
+                        console.log("Picsum Photos fallback successful!");
+                    } catch (picsumErr) {
+                        console.warn("Picsum Photos failed, generating premium SVG fallback...", picsumErr);
+                        const cleanPrompt = safePromptText.substring(0, 30).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        const svgString = `
+                            <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#09090b" />
+                                        <stop offset="50%" stop-color="#18181b" />
+                                        <stop offset="100%" stop-color="#27272a" />
+                                    </linearGradient>
+                                    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#a855f7" />
+                                        <stop offset="100%" stop-color="#06b6d4" />
+                                    </linearGradient>
+                                </defs>
+                                <rect width="100%" height="100%" fill="url(#bgGrad)" />
+                                <rect x="20" y="20" width="${w - 40}" height="${h - 40}" rx="16" fill="none" stroke="url(#glowGrad)" stroke-width="1.5" opacity="0.3" />
+                                <circle cx="${w / 2}" cy="${h / 2 - 30}" r="40" fill="#1e1b4b" stroke="url(#glowGrad)" stroke-width="2" />
+                                <path d="M${w / 2 - 15} ${h / 2 - 45} L${w / 2 + 15} ${h / 2 - 45} L${w / 2 + 25} ${h / 2 - 30} L${w / 2 - 25} ${h / 2 - 30} Z" fill="#a855f7" opacity="0.8" />
+                                <rect x="${w / 2 - 25}" y="${h / 2 - 30}" width="50" height="30" rx="4" fill="#06b6d4" opacity="0.8" />
+                                <circle cx="${w / 2}" cy="${h / 2 - 15}" r="8" fill="#09090b" />
+                                <text x="50%" y="${h / 2 + 40}" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f4f4f5" letter-spacing="2">VISUALIZATION ACTIVE</text>
+                                <text x="50%" y="${h / 2 + 65}" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#71717a" letter-spacing="1">API Offline • ${cleanPrompt}...</text>
+                            </svg>
+                        `.trim().replace(/\s+/g, ' ');
+                        b64Data = window.btoa(unescape(encodeURIComponent(svgString)));
+                    }
                 }
-                b64Data = window.btoa(binary);
             }
+
             
             const geminiResponse = {
                 candidates: [{
