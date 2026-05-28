@@ -64,9 +64,7 @@ window.fetch = async (url, options) => {
                     },
                     body: JSON.stringify({
                         prompt: promptText,
-                        model: routerModel,
-                        size: size,
-                        response_format: "b64_json"
+                        model: routerModel
                     })
                 });
                 
