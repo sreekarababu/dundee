@@ -872,7 +872,7 @@ export default function App() {
     const [scriptLanguage, setScriptLanguage] = useState('Auto-Detect Native Language');
     const apiKey = 'AIzaSyBwWqYggIMOEk4ftwYa3D1mvZpyxdBRCk0'; // User-provided text API key
 
-    const GEMINI_TEXT_MODEL = 'gemini-2.5-flash-preview-09-2025';
+    const GEMINI_TEXT_MODEL = 'gemini-2.5-flash';
     const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image-preview';
     const geminiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
