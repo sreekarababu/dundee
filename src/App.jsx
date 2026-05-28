@@ -44,7 +44,7 @@ window.fetch = async (url, options) => {
             }
             
             const routerKey = "16c88c0ad44d20615af764b5c41e5edd0f52bcda76796dd32f6f6e9834b1b6dc";
-            const routerModel = "black-forest-labs/flux-schnell";
+            const routerModel = "black-forest-labs/FLUX-1-schnell";
             const imagerouterUrl = "https://api.imagerouter.io/v1/openai/images/generations";
             
             console.log("Calling imagerouter.io with size:", size, "model:", routerModel);
