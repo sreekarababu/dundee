@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { OAuth2Client } = require('google-auth-library');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -11,6 +12,10 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Middleware to verify Google token
 async function verifyToken(req, res, next) {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+        // Bypass verification if GOOGLE_CLIENT_ID is not configured
+        return next();
+    }
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: { message: 'Unauthorized: Missing or invalid token format. Please sign in with Google first.' } });
@@ -38,7 +43,8 @@ async function verifyToken(req, res, next) {
 // Proxy endpoint for Gemini API
 app.post('/api/gemini/generateContent', verifyToken, async (req, res) => {
     try {
-        const { payload: geminiPayload, model } = req.body;
+        const geminiPayload = req.body.payload || req.body;
+        const model = req.body.model;
         
         const clientApiKey = req.headers['x-gemini-api-key'];
         const effectiveApiKey = clientApiKey || process.env.GEMINI_API_KEY;
@@ -47,10 +53,10 @@ app.post('/api/gemini/generateContent', verifyToken, async (req, res) => {
             return res.status(500).json({ error: { message: 'Server configuration error: Gemini API key not provided by client and not set in server/.env' } });
         }
 
-        const modelName = model || 'gemini-3.5-flash';
+        const modelName = model || 'gemini-2.5-flash';
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${effectiveApiKey}`;
 
-        console.log(`[${req.user.email}] generating content with ${modelName}`);
+        console.log(`[${req.user?.email || 'Anonymous'}] generating content with ${modelName}`);
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -77,7 +83,8 @@ app.post('/api/gemini/generateContent', verifyToken, async (req, res) => {
 // Proxy endpoint for Imagen API (if needed)
 app.post('/api/gemini/predict', verifyToken, async (req, res) => {
     try {
-        const { payload: geminiPayload, model } = req.body;
+        const geminiPayload = req.body.payload || req.body;
+        const model = req.body.model;
         
         const clientApiKey = req.headers['x-gemini-api-key'];
         const effectiveApiKey = clientApiKey || process.env.GEMINI_API_KEY;
@@ -89,7 +96,7 @@ app.post('/api/gemini/predict', verifyToken, async (req, res) => {
         const modelName = model || 'imagen-3.0-generate-001';
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:predict?key=${effectiveApiKey}`;
 
-        console.log(`[${req.user.email}] predicting with ${modelName}`);
+        console.log(`[${req.user?.email || 'Anonymous'}] predicting with ${modelName}`);
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -116,7 +123,7 @@ app.post('/api/generate-image', async (req, res) => {
     try {
         const { prompt, model, width, height } = req.body;
         
-        const routerKey = "16c88c0ad44d20615af764b5c41e5edd0f52bcda76796dd32f6f6e9834b1b6dc";
+        const routerKey = process.env.IMAGEROUTER_API_KEY || "16c88c0ad44d20615af764b5c41e5edd0f52bcda76796dd32f6f6e9834b1b6dc";
         const routerModel = model || "google/nano-banana-2:free";
         const w = width || 1024;
         const h = height || 1024;
@@ -219,6 +226,18 @@ app.post('/api/generate-image', async (req, res) => {
         console.error("[Backend Proxy] Global error:", e);
         res.status(500).json({ error: { message: e.message } });
     }
+});
+
+// Serve static files from the React frontend build directory
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+// Handle SPA routing: serve index.html for all non-API paths
+app.get(/(.*)/, (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+        return next();
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3001;

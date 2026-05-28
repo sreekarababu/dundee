@@ -42,7 +42,7 @@ window.fetch = async (url, options) => {
             else if (apiAspectRatio === "3:4") { w = 768; h = 1024; }
             
             const routerModel = "google/nano-banana-2:free";
-            const proxyUrl = "http://localhost:3001/api/generate-image";
+            const proxyUrl = "/api/generate-image";
             
             console.log("Calling backend proxy for image generation...");
             const proxyResp = await originalFetch(proxyUrl, {
@@ -94,6 +94,39 @@ window.fetch = async (url, options) => {
                 status: 500,
                 headers: { 'Content-Type': 'application/json' }
             });
+        }
+    } else if (typeof url === 'string' && url.includes('generativelanguage.googleapis.com')) {
+        try {
+            console.log("INTERCEPTING GEMINI TEXT GENERATION FOR BACKEND PROXY");
+            const isPredict = url.includes(':predict');
+            
+            // Extract model from URL
+            const modelMatch = url.match(/models\/([^:]+):/);
+            const model = modelMatch ? modelMatch[1] : 'gemini-2.5-flash';
+            
+            const proxyUrl = isPredict ? '/api/gemini/predict' : '/api/gemini/generateContent';
+            
+            let originalPayload = {};
+            if (options && options.body) {
+                originalPayload = JSON.parse(options.body);
+            }
+            
+            // Call local/production proxy
+            const proxyResp = await originalFetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-gemini-api-key': localStorage.getItem('user_api_key') || ''
+                },
+                body: JSON.stringify({
+                    payload: originalPayload,
+                    model: model
+                })
+            });
+            
+            return proxyResp;
+        } catch (e) {
+            console.error("Gemini Text Interceptor Error:", e);
         }
     }
     return originalFetch(url, options);
