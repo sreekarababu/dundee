@@ -1,0 +1,6 @@
+{
+  "name": "dundee",
+  "description": "An AI-powered cinematic storyboard suite, script blocking assistant, camera sequence planner, and casting and scout catalog designed to elevate pre-production.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
