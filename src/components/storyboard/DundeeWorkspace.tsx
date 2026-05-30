@@ -12,6 +12,7 @@ import SetupTab from './SetupTab';
 import CastLocationsTab from './CastLocationsTab';
 import StoryboardTab from './StoryboardTab';
 import InpaintingEditor from './InpaintingEditor';
+import SettingsTab from './SettingsTab';
 import APIHealthMonitor from '../APIHealthMonitor';
 
 import { 
@@ -56,7 +57,8 @@ export default function DundeeWorkspace({ userSession, onRefreshUser, onBackToDa
     projectName, setProjectName,
     scriptLanguage, setScriptLanguage,
     activeTab, setActiveTab,
-    handleUndo, resetAllState
+    handleUndo, resetAllState,
+    exportWorkspace, importWorkspace
   } = dundeeState;
 
   // Loader / Processing States
@@ -231,6 +233,20 @@ Respond with a clean structural JSON matches the schema. Output nothing but the 
       console.error(err);
       alert('Failed to read draft file.');
     }
+  };
+
+  const handleExportLocalData = () => {
+    const data = exportWorkspace();
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dundee_workspace_${new Date().getTime()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // 2. DNA Extraction Analyst
@@ -603,7 +619,37 @@ Output a clean JSON with array elements.`,
     }
   };
 
-  // 9. Technical Specs chart overlays (Infographics overlays)
+  // 9. Veo Video Generation
+  const generateVeoVideo = async (sceneId: number, shotId: number, options: { prompt: string; startFrameUrl: string | null; endFrameUrl: string | null; duration: string; size: string }) => {
+    const frameId = `${sceneId}-${shotId}`;
+    startGen(`veo-${frameId}`);
+    try {
+      if (userSession && userSession.tokens_remaining < 500) {
+        alert("You need at least 500 credits to generate a video. Upgrade in Billings tab!");
+        return;
+      }
+
+      const res = await geminiApi.generateVideo({
+        prompt: options.prompt,
+        startImageBase64: options.startFrameUrl ? options.startFrameUrl.split(',')[1] : undefined,
+        endImageBase64: options.endFrameUrl ? options.endFrameUrl.split(',')[1] : undefined,
+        duration: options.duration,
+        aspectRatio: options.size,
+      });
+
+      if (res.videoUrl) {
+        setGeneratedVideos(prev => ({ ...prev, [frameId]: res.videoUrl }));
+        onRefreshUser();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Video generation failed. Ensure backend has Veo mocked or implemented.');
+    } finally {
+      stopGen(`veo-${frameId}`);
+    }
+  };
+
+  // 10. Technical Specs chart overlays (Infographics overlays)
   const generateTechBreakdown = async (sceneId: number, shotId: number, shotData: Shot) => {
     const frameId = `${sceneId}-${shotId}`;
     const url = generatedImages[frameId];
@@ -1320,6 +1366,12 @@ Output a clean JSON matching the schema.`,
           >
             Director Canvas
           </button>
+          <button 
+            onClick={() => setActiveTab('settings')} 
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'settings' ? 'bg-[#000] text-white border border-[#2e2e2e]' : 'text-zinc-400 hover:text-white bg-transparent'}`}
+          >
+            Settings
+          </button>
         </nav>
         <span className="hidden sm:block text-[11px] font-mono text-zinc-500 tracking-wider font-bold">
           PRISTINE CINEMATOGRAPHY BLUEPRINTS
@@ -1388,6 +1440,7 @@ Output a clean JSON matching the schema.`,
             generatedCollages={generatedCollages}
             generatedBreakdowns={generatedBreakdowns}
             generatedCostumeBoards={generatedCostumeBoards}
+            generatedVideos={generatedVideos}
             characters={characters}
             locations={locations}
             accessories={accessories}
@@ -1425,6 +1478,7 @@ Output a clean JSON matching the schema.`,
             generateCollages={generateCollages}
             generateCostumeBoard={generateCostumeBoard}
             generateAIImage={generateAIImage}
+            generateVeoVideo={generateVeoVideo}
             editAIImage={editAIImage}
             handleImportDressCode={handleImportDressCode}
 
@@ -1440,6 +1494,14 @@ Output a clean JSON matching the schema.`,
             updateShotLighting={(s, sh, val) => updateShotField(s, sh, 'lighting', val)}
             updateShotTimeOfDay={(s, sh, val) => updateShotField(s, sh, 'timeOfDay', val)}
             updateShotLocation={(s, sh, val) => updateShotField(s, sh, 'locationId', val)}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsTab 
+            onExportLocalData={handleExportLocalData}
+            getWorkspaceData={exportWorkspace}
+            onImportWorkspaceData={importWorkspace}
           />
         )}
       </main>

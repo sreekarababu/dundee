@@ -9,6 +9,7 @@ export function useDundeeState() {
   const [generatedCollages, setGeneratedCollages] = useState<Record<number, string[] | string>>({});
   const [generatedBreakdowns, setGeneratedBreakdowns] = useState<Record<string, string>>({});
   const [generatedCostumeBoards, setGeneratedCostumeBoards] = useState<Record<number, string>>({});
+  const [generatedVideos, setGeneratedVideos] = useState<Record<string, string>>({});
   
   const [characters, setCharacters] = useState<Character[]>([]);
   const [locations, setLocations] = useState<LocationModel[]>([]);
@@ -30,7 +31,7 @@ export function useDundeeState() {
   const [enforceLikeness, setEnforceLikeness] = useState(false);
   const [projectName, setProjectName] = useState("My Project");
   const [scriptLanguage, setScriptLanguage] = useState('Auto-Detect Native Language');
-  const [activeTab, setActiveTab] = useState<'script' | 'assets' | 'storyboard'>('script');
+  const [activeTab, setActiveTab] = useState<'script' | 'assets' | 'storyboard' | 'settings'>('script');
 
   const [autosaveEnabled, setAutosaveEnabled] = useState(() => {
     return localStorage.getItem('dundee_autosave_enabled') !== 'false';
@@ -64,6 +65,7 @@ export function useDundeeState() {
         if (data.generatedCollages !== undefined) setGeneratedCollages(data.generatedCollages);
         if (data.generatedBreakdowns !== undefined) setGeneratedBreakdowns(data.generatedBreakdowns);
         if (data.generatedCostumeBoards !== undefined) setGeneratedCostumeBoards(data.generatedCostumeBoards);
+        if (data.generatedVideos !== undefined) setGeneratedVideos(data.generatedVideos);
         if (data.characters !== undefined) setCharacters(data.characters);
         if (data.locations !== undefined) setLocations(data.locations);
         if (data.accessories !== undefined) setAccessories(data.accessories);
@@ -110,6 +112,7 @@ export function useDundeeState() {
       generatedCollages,
       generatedBreakdowns,
       generatedCostumeBoards,
+      generatedVideos,
       characters,
       locations,
       accessories,
@@ -144,6 +147,7 @@ export function useDundeeState() {
     generatedCollages,
     generatedBreakdowns,
     generatedCostumeBoards,
+    generatedVideos,
     characters,
     locations,
     accessories,
@@ -227,10 +231,71 @@ export function useDundeeState() {
     setGeneratedCollages({});
     setGeneratedBreakdowns({});
     setGeneratedCostumeBoards({});
+    setGeneratedVideos({});
     setCharacters([]);
     setLocations([]);
     setAccessories([]);
     setProjectName("My Project");
+  };
+
+  const exportWorkspace = () => {
+    return {
+      script,
+      parsedScenes,
+      generatedImages,
+      generatedCollages,
+      generatedBreakdowns,
+      generatedCostumeBoards,
+      generatedVideos,
+      characters,
+      locations,
+      accessories,
+      selectedStyle,
+      aspectRatio,
+      selectedTone,
+      selectedPalette,
+      selectedGlobalTime,
+      selectedGlobalCamera,
+      selectedGlobalLensGroup,
+      selectedDirector,
+      selectedFilmStock,
+      selectedDiffusion,
+      selectedDof,
+      selectedBoardStyle,
+      enforceContinuity,
+      enforceLikeness,
+      projectName,
+      scriptLanguage
+    };
+  };
+
+  const importWorkspace = (data: any) => {
+    if (data.script) setScript(data.script);
+    if (data.parsedScenes) setParsedScenes(data.parsedScenes);
+    if (data.generatedImages) setGeneratedImages(data.generatedImages);
+    if (data.generatedCollages) setGeneratedCollages(data.generatedCollages);
+    if (data.generatedBreakdowns) setGeneratedBreakdowns(data.generatedBreakdowns);
+    if (data.generatedCostumeBoards) setGeneratedCostumeBoards(data.generatedCostumeBoards);
+    if (data.generatedVideos) setGeneratedVideos(data.generatedVideos);
+    if (data.characters) setCharacters(data.characters);
+    if (data.locations) setLocations(data.locations);
+    if (data.accessories) setAccessories(data.accessories);
+    if (data.selectedStyle) setSelectedStyle(data.selectedStyle);
+    if (data.aspectRatio) setAspectRatio(data.aspectRatio);
+    if (data.selectedTone) setSelectedTone(data.selectedTone);
+    if (data.selectedPalette) setSelectedPalette(data.selectedPalette);
+    if (data.selectedGlobalTime) setSelectedGlobalTime(data.selectedGlobalTime);
+    if (data.selectedGlobalCamera) setSelectedGlobalCamera(data.selectedGlobalCamera);
+    if (data.selectedGlobalLensGroup) setSelectedGlobalLensGroup(data.selectedGlobalLensGroup);
+    if (data.selectedDirector) setSelectedDirector(data.selectedDirector);
+    if (data.selectedFilmStock) setSelectedFilmStock(data.selectedFilmStock);
+    if (data.selectedDiffusion) setSelectedDiffusion(data.selectedDiffusion);
+    if (data.selectedDof) setSelectedDof(data.selectedDof);
+    if (data.selectedBoardStyle) setSelectedBoardStyle(data.selectedBoardStyle);
+    if (data.enforceContinuity !== undefined) setEnforceContinuity(data.enforceContinuity);
+    if (data.enforceLikeness !== undefined) setEnforceLikeness(data.enforceLikeness);
+    if (data.projectName) setProjectName(data.projectName);
+    if (data.scriptLanguage) setScriptLanguage(data.scriptLanguage);
   };
 
   return {
@@ -241,6 +306,7 @@ export function useDundeeState() {
     generatedCollages, setGeneratedCollages,
     generatedBreakdowns, setGeneratedBreakdowns,
     generatedCostumeBoards, setGeneratedCostumeBoards,
+    generatedVideos, setGeneratedVideos,
     characters, setCharacters,
     locations, setLocations,
     accessories, setAccessories,
@@ -263,7 +329,8 @@ export function useDundeeState() {
     activeTab, setActiveTab,
     autosaveEnabled, setAutosaveEnabled,
     history, handleUndo, resetAllState,
-    updateSceneDetails, updateShotOrder, updateShotBlocking
+    updateSceneDetails, updateShotOrder, updateShotBlocking,
+    exportWorkspace, importWorkspace
   };
 }
 export default useDundeeState;

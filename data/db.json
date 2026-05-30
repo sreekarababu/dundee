@@ -1,0 +1,119 @@
+{
+  "users": [
+    {
+      "id": "u-admin-01",
+      "name": "System Admin",
+      "email": "admin@canvascloud.com",
+      "phone": "+1 555-0100",
+      "password_hash": "$2b$10$/D6/xRbwqfsqtnJhZTwxUuxpEcEZYIsl6fnSu0bS.VEu0S7rW0Eja",
+      "role": "admin",
+      "package_type": "ENTERPRISE",
+      "tokens_remaining": 1000000,
+      "total_tokens_used": 4250,
+      "api_provider": "gemini-3.1-pro-preview",
+      "account_status": "ACTIVE",
+      "created_at": "2026-01-15T08:00:00.000Z",
+      "updated_at": "2026-05-30T08:00:26.780Z",
+      "last_login": "2026-05-30T08:00:26.779Z"
+    },
+    {
+      "id": "u-user-02",
+      "name": "Jane Foster",
+      "email": "user@canvascloud.com",
+      "phone": "+1 555-0199",
+      "password_hash": "$2b$10$/D6/xRbwqfsqtnJhZTwxUuq5.fkukgR7NK.RwLs3gtttBaodCfsz.",
+      "role": "user",
+      "package_type": "FREE",
+      "tokens_remaining": 150,
+      "total_tokens_used": 350,
+      "api_provider": "gemini-3.5-flash",
+      "account_status": "ACTIVE",
+      "created_at": "2026-04-10T12:00:00.000Z",
+      "updated_at": "2026-05-29T09:15:00.000Z",
+      "last_login": "2026-05-29T08:10:00.000Z"
+    },
+    {
+      "id": "u-guest-00",
+      "name": "Guest Director",
+      "email": "guest@dundeestudio.com",
+      "phone": "+1 555-0000",
+      "password_hash": "",
+      "role": "user",
+      "package_type": "FREE",
+      "tokens_remaining": 5000,
+      "total_tokens_used": 0,
+      "api_provider": "gemini-3.5-flash",
+      "account_status": "ACTIVE",
+      "created_at": "2026-05-30T07:59:09.466Z",
+      "updated_at": "2026-05-30T07:59:09.466Z"
+    }
+  ],
+  "otp_verifications": [],
+  "subscriptions": [
+    {
+      "id": "sub-01",
+      "user_id": "u-admin-01",
+      "package_name": "ENTERPRISE",
+      "package_price": 199,
+      "token_limit": 1000000,
+      "expiry_date": "2027-05-29T12:00:00.000Z",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "sub-02",
+      "user_id": "u-user-02",
+      "package_name": "FREE",
+      "package_price": 0,
+      "token_limit": 500,
+      "expiry_date": "2026-06-29T12:00:00.000Z",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "sub-guest-00",
+      "user_id": "u-guest-00",
+      "package_name": "FREE",
+      "package_price": 0,
+      "token_limit": 5000,
+      "expiry_date": "2027-05-30T07:59:09.466Z",
+      "status": "ACTIVE"
+    }
+  ],
+  "api_usage_logs": [
+    {
+      "id": "log-01",
+      "user_id": "u-user-02",
+      "email": "user@canvascloud.com",
+      "api_used": "gemini-3.5-flash",
+      "tokens_consumed": 10,
+      "request_type": "AI Paint Assist",
+      "created_at": "2026-05-28T14:22:00.000Z"
+    },
+    {
+      "id": "log-02",
+      "user_id": "u-user-02",
+      "email": "user@canvascloud.com",
+      "api_used": "gemini-3.5-flash",
+      "tokens_consumed": 15,
+      "request_type": "AI Image Trace",
+      "created_at": "2026-05-29T07:44:00.000Z"
+    },
+    {
+      "id": "log-03",
+      "user_id": "u-admin-01",
+      "email": "admin@canvascloud.com",
+      "api_used": "gemini-3.1-pro-preview",
+      "tokens_consumed": 50,
+      "request_type": "AI High Fidelity Polish",
+      "created_at": "2026-05-29T09:12:00.000Z"
+    }
+  ],
+  "sent_otp_logs": [
+    {
+      "id": "otp-log-01",
+      "email": "user@canvascloud.com",
+      "type": "Verification OTP",
+      "smtp_status": "SIMULATED",
+      "timestamp": "2026-04-10T11:58:00.000Z"
+    }
+  ]
+}

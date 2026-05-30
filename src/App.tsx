@@ -17,20 +17,14 @@ export default function App() {
   // Sync session on mount
   const fetchCurrentUser = async () => {
     try {
-      const userObj = await saasApi.getMe();
+      let userObj = await saasApi.getMe().catch(() => null);
       if (userObj) {
         setCurrentUser(userObj);
-        if (userObj.id === 'u-guest-00') {
-          setViewState('drawing-gallery');
-        } else {
-          setViewState('saas-portal');
-        }
+        setViewState('saas-portal');
       } else {
-        setCurrentUser(null);
         setViewState('landing');
       }
     } catch (err) {
-      setCurrentUser(null);
       setViewState('landing');
     } finally {
       setLoadingUser(false);

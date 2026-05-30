@@ -21,6 +21,7 @@ interface StoryboardTabProps {
   generatedCollages: Record<number, string[] | string>;
   generatedBreakdowns: Record<string, string>;
   generatedCostumeBoards: Record<number, string>;
+  generatedVideos: Record<string, string>;
   characters: Character[];
   locations: LocationModel[];
   accessories: AccessoryModel[];
@@ -59,6 +60,7 @@ interface StoryboardTabProps {
   generateCollages: (sceneId: number) => void;
   generateCostumeBoard: (sceneId: number) => void;
   generateAIImage: (sceneId: number, shotId: number, shotData: Shot, mcId?: string | null, isUpdate?: boolean) => void;
+  generateVeoVideo: (sceneId: number, shotId: number, options: { prompt: string; startFrameUrl: string | null; endFrameUrl: string | null; duration: string; size: string }) => void;
   editAIImage: (sceneId: number, shotId: number, editPrompt: string, maskDataUrl: string | null) => void;
   handleImportDressCode: (targetId: number, sourceId: number) => void;
 
@@ -85,6 +87,7 @@ export default function StoryboardTab({
   generatedCollages,
   generatedBreakdowns,
   generatedCostumeBoards,
+  generatedVideos,
   characters,
   locations,
   accessories,
@@ -122,6 +125,7 @@ export default function StoryboardTab({
   generateCollages,
   generateCostumeBoard,
   generateAIImage,
+  generateVeoVideo,
   editAIImage,
   handleImportDressCode,
 
@@ -144,6 +148,9 @@ export default function StoryboardTab({
   const makeFrameId = (sceneId: number, shotId: number) => `${sceneId}-${shotId}`;
   const makeLastFrameId = (sceneId: number, shotId: number) => `${sceneId}-${shotId}-last`;
   const makeMcFrameId = (sceneId: number, shotId: number, mcId: string) => `${sceneId}-${shotId}-mc-${mcId}`;
+
+  const [veoOptions, setVeoOptions] = useState<Record<string, { duration: string; size: string; useStart: boolean; useEnd: boolean }>>({});
+
 
   const getCharactersForShotString = (shot: Shot, chars: Character[]) => {
     if (!shot.characters_present || shot.characters_present.length === 0) return 'None';
@@ -538,6 +545,85 @@ export default function StoryboardTab({
                                       <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/lastframe:opacity-100 transition-all flex items-center justify-center gap-4 backdrop-blur-sm">
                                         <button onClick={() => handleDownloadSingleImage(generatedImages[makeLastFrameId(scene.id, shot.id)], `last_frame_s${scene.id}_${shot.id}.png`)} className="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl hover:bg-emerald-500/30" title="Download"><Download className="w-5 h-5" /></button>
                                         <button onClick={() => setFullscreenImage(generatedImages[makeLastFrameId(scene.id, shot.id)])} className="bg-blue-500/20 text-blue-400 p-3 rounded-xl hover:bg-blue-500/30" title="View Fullscreen"><Maximize className="w-5 h-5" /></button>
+                                      </div>
+                                    </div>
+                                  )}
+                                  )}
+                                </div>
+
+                                {/* Veo Video Generation Panel */}
+                                <div className="w-full bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80 shadow-sm flex flex-col gap-3">
+                                  <div className="flex items-center justify-between pb-2 border-b border-zinc-800/60">
+                                    <div className="flex items-center gap-2">
+                                      <Video className="w-4 h-4 text-emerald-400" />
+                                      <span className="text-xs font-bold text-zinc-300 uppercase tracking-widest">Veo 3 Video Synthesis</span>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <label className="flex items-center gap-2 text-[11px] text-zinc-400 cursor-pointer">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={veoOptions[frameId]?.useStart ?? true} 
+                                        onChange={(e) => setVeoOptions(prev => ({ ...prev, [frameId]: { ...(prev[frameId] || { duration: '5s', size: '16:9' }), useStart: e.target.checked } }))} 
+                                        className="accent-emerald-500 rounded bg-zinc-800 border-zinc-700" 
+                                      />
+                                      Use Primary Frame as Start
+                                    </label>
+                                    <label className="flex items-center gap-2 text-[11px] text-zinc-400 cursor-pointer">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={veoOptions[frameId]?.useEnd ?? false} 
+                                        onChange={(e) => setVeoOptions(prev => ({ ...prev, [frameId]: { ...(prev[frameId] || { duration: '5s', size: '16:9', useStart: true }), useEnd: e.target.checked } }))} 
+                                        className="accent-emerald-500 rounded bg-zinc-800 border-zinc-700" 
+                                      />
+                                      Use End Frame (if available)
+                                    </label>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <select 
+                                      value={veoOptions[frameId]?.duration ?? '5s'} 
+                                      onChange={(e) => setVeoOptions(prev => ({ ...prev, [frameId]: { ...(prev[frameId] || { size: '16:9', useStart: true, useEnd: false }), duration: e.target.value } }))} 
+                                      className="bg-zinc-950 border border-zinc-800 text-xs text-white rounded-xl px-3 py-2"
+                                    >
+                                      <option value="5s">5 Seconds</option>
+                                      <option value="10s">10 Seconds</option>
+                                    </select>
+                                    <select 
+                                      value={veoOptions[frameId]?.size ?? '16:9'} 
+                                      onChange={(e) => setVeoOptions(prev => ({ ...prev, [frameId]: { ...(prev[frameId] || { duration: '5s', useStart: true, useEnd: false }), size: e.target.value } }))} 
+                                      className="bg-zinc-950 border border-zinc-800 text-xs text-white rounded-xl px-3 py-2"
+                                    >
+                                      <option value="16:9">16:9 Widescreen</option>
+                                      <option value="9:16">9:16 Vertical</option>
+                                      <option value="1:1">1:1 Square</option>
+                                    </select>
+                                    <button 
+                                      onClick={() => generateVeoVideo(scene.id, shot.id, {
+                                        prompt: shot.prompt,
+                                        startFrameUrl: (veoOptions[frameId]?.useStart ?? true) ? generatedImages[frameId] : null,
+                                        endFrameUrl: (veoOptions[frameId]?.useEnd ?? false) ? generatedImages[makeLastFrameId(scene.id, shot.id)] : null,
+                                        duration: veoOptions[frameId]?.duration ?? '5s',
+                                        size: veoOptions[frameId]?.size ?? '16:9'
+                                      })}
+                                      disabled={generatingIds.has(`veo-${frameId}`)}
+                                      className="ml-auto bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 disabled:opacity-50 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors"
+                                    >
+                                      {generatingIds.has(`veo-${frameId}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Synthesize Video
+                                    </button>
+                                  </div>
+
+                                  {generatedVideos[frameId] && (
+                                    <div className="mt-3 rounded-xl border-2 border-emerald-900 overflow-hidden relative w-full bg-black">
+                                      <video 
+                                        src={generatedVideos[frameId]} 
+                                        controls 
+                                        autoPlay 
+                                        loop 
+                                        className="w-full object-cover"
+                                        style={{ aspectRatio: (veoOptions[frameId]?.size ?? '16:9').replace(':', '/') }}
+                                      />
+                                      <div className="absolute top-2 left-2 bg-emerald-500/20 text-emerald-400 backdrop-blur-md px-2 py-1 rounded border border-emerald-500/30 text-[10px] font-bold tracking-widest">
+                                        VEO 3 GENERATED
                                       </div>
                                     </div>
                                   )}
