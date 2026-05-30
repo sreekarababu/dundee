@@ -688,8 +688,9 @@ app.get('/api/me', authenticateToken, (req: any, res) => {
 // GET /api/health/gemini (Verifies if GEMINI_API_KEY environment variable is configured and valid)
 app.get('/api/health/gemini', async (req, res) => {
   try {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key || key.trim() === '') {
+    const customKey = req.headers['x-custom-gemini-key'];
+    const key = customKey || process.env.GEMINI_API_KEY;
+    if (!key || (typeof key === 'string' && key.trim() === '')) {
       return res.json({
         status: 'unhealthy',
         reason: 'missing_key',
@@ -698,7 +699,7 @@ app.get('/api/health/gemini', async (req, res) => {
     }
 
     // Try creating clients and launching a quick validation run
-    const ai = getAiClient();
+    const ai = getAiClient(customKey as string);
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash',
       contents: [{ role: 'user', parts: [{ text: 'p' }] }],

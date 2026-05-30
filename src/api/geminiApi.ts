@@ -76,10 +76,7 @@ export const geminiApi = {
   checkHealth: async () => {
     const res = await fetch(`${API_BASE}/health/gemini`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader()
-      }
+      headers: getApiHeaders()
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
