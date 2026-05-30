@@ -1308,9 +1308,42 @@ Output a clean JSON matching the schema.`,
           <div className="flex items-center gap-2">
             <Compass className="w-5 h-5 text-emerald-400 animate-pulse" />
             <span className="text-sm font-black uppercase tracking-[0.25em] text-emerald-400">Dundee</span>
-            <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Storyboard Studio</span>
+            <span className="hidden xl:inline text-xs text-zinc-500 font-bold uppercase tracking-wider">Storyboard Studio</span>
           </div>
         </div>
+
+        {/* Centered Navigation Tabs */}
+        <nav className="hidden lg:flex items-center gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-850 shadow-inner absolute left-1/2 -translate-x-1/2">
+          <button 
+            onClick={() => setActiveTab('script')} 
+            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'script' ? 'bg-[#000] text-white border border-[#2e2e2e] shadow-sm' : 'text-zinc-400 hover:text-white bg-transparent border border-transparent'}`}
+          >
+            Setup
+          </button>
+          <button 
+            onClick={() => setActiveTab('assets')} 
+            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'assets' ? 'bg-[#000] text-white border border-[#2e2e2e] shadow-sm' : 'text-zinc-400 hover:text-white bg-transparent border border-transparent'}`}
+          >
+            Cast
+          </button>
+          <button 
+            onClick={() => {
+              if (parsedScenes.length > 0 && selectedScene === null) {
+                setSelectedScene(parsedScenes[0].id);
+              }
+              setActiveTab('storyboard');
+            }} 
+            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'storyboard' ? 'bg-[#000] text-white border border-[#2e2e2e] shadow-sm' : 'text-zinc-400 hover:text-white bg-transparent border border-transparent'}`}
+          >
+            Canvas
+          </button>
+          <button 
+            onClick={() => setActiveTab('settings')} 
+            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'settings' ? 'bg-[#000] text-white border border-[#2e2e2e] shadow-sm' : 'text-zinc-400 hover:text-white bg-transparent border border-transparent'}`}
+          >
+            Settings
+          </button>
+        </nav>
 
         {/* Action controls */}
         <div className="flex items-center gap-3">
@@ -1339,44 +1372,6 @@ Output a clean JSON matching the schema.`,
           </button>
         </div>
       </header>
-
-      {/* Tabs Menu bar */}
-      <div className="bg-zinc-950 border-b border-zinc-900/90 py-2.5 px-6 flex items-center justify-between gap-4">
-        <nav className="flex items-center gap-1.5 bg-zinc-900 p-1.5 rounded-xl border border-zinc-850 shadow-inner">
-          <button 
-            onClick={() => setActiveTab('script')} 
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'script' ? 'bg-[#000] text-white border border-[#2e2e2e]' : 'text-zinc-400 hover:text-white bg-transparent'}`}
-          >
-            Setup & Analytics
-          </button>
-          <button 
-            onClick={() => setActiveTab('assets')} 
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'assets' ? 'bg-[#000] text-white border border-[#2e2e2e]' : 'text-zinc-400 hover:text-white bg-transparent'}`}
-          >
-            Cast & Settings
-          </button>
-          <button 
-            onClick={() => {
-              if (parsedScenes.length > 0 && selectedScene === null) {
-                setSelectedScene(parsedScenes[0].id);
-              }
-              setActiveTab('storyboard');
-            }} 
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'storyboard' ? 'bg-[#000] text-white border border-[#2e2e2e]' : 'text-zinc-400 hover:text-white bg-transparent'}`}
-          >
-            Director Canvas
-          </button>
-          <button 
-            onClick={() => setActiveTab('settings')} 
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'settings' ? 'bg-[#000] text-white border border-[#2e2e2e]' : 'text-zinc-400 hover:text-white bg-transparent'}`}
-          >
-            Settings
-          </button>
-        </nav>
-        <span className="hidden sm:block text-[11px] font-mono text-zinc-500 tracking-wider font-bold">
-          PRISTINE CINEMATOGRAPHY BLUEPRINTS
-        </span>
-      </div>
 
       <main className="flex-1 p-6 md:p-8 overflow-y-auto custom-scrollbar">
         {activeTab === 'script' && (
