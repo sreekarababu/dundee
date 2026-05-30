@@ -28,27 +28,14 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
-// --- LAZY INITIALIZED GEMINI API CLIENT ---
-let aiClient: GoogleGenAI | null = null;
 function getAiClient(customKey?: string) {
-  if (customKey) {
-    return new GoogleGenAI({
-      apiKey: customKey,
-      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-    });
+  if (!customKey) {
+    throw new Error('Custom Gemini API Key is required. Please provide it in the Settings tab.');
   }
-
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) {
-    throw new Error('GEMINI_API_KEY is not configured in environment variables, and no custom key was provided.');
-  }
-  if (!aiClient) {
-    aiClient = new GoogleGenAI({ 
-      apiKey: key,
-      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-    });
-  }
-  return aiClient;
+  return new GoogleGenAI({
+    apiKey: customKey,
+    httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+  });
 }
 
 // --- JWT AUTH MULTILAYER MIDDLEWARES ---
@@ -689,12 +676,11 @@ app.get('/api/me', authenticateToken, (req: any, res) => {
 app.get('/api/health/gemini', async (req, res) => {
   try {
     const customKey = req.headers['x-custom-gemini-key'];
-    const key = customKey || process.env.GEMINI_API_KEY;
-    if (!key || (typeof key === 'string' && key.trim() === '')) {
+    if (!customKey || (typeof customKey === 'string' && customKey.trim() === '')) {
       return res.json({
         status: 'unhealthy',
         reason: 'missing_key',
-        message: 'GEMINI_API_KEY environment variable is missing or blank.'
+        message: 'Custom Gemini API Key is required. Please paste it in the Settings tab.'
       });
     }
 
@@ -1502,8 +1488,12 @@ app.post('/api/gemini/generate-text', authenticateToken, async (req: any, res) =
   const user = dbService.getUserById(req.user.id);
   if (!user) return res.status(404).json({ error: 'No matching user found.' });
 
+  if (!customKey) {
+    return res.status(400).json({ error: 'Custom Gemini API Key is required. Please add it in Settings.' });
+  }
+
   const cost = 25; // Standard query cost for designs
-  if (!customKey && user.tokens_remaining < cost) {
+  if (user.tokens_remaining < cost) {
     return res.status(429).json({ 
       error: 'Token quota exhausted. Please upgrade your package tier to acquire more tokens.' 
     });
@@ -1538,14 +1528,9 @@ app.post('/api/gemini/generate-text', authenticateToken, async (req: any, res) =
       tokensRemaining: user.tokens_remaining - cost
     });
   } catch (error: any) {
-    console.log('[Simulation Gateway] Gemini text generation live request bypassed gracefully.');
-    dbService.addApiUsageLog(user.id, 'simulated-dundee-text', cost, 'Simulated Dundee design prompt');
-    const fallbackText = getSimulatedGeminiText(contents, systemInstruction, responseSchema);
-    return res.json({
-      text: fallbackText,
-      tokensDeducted: cost,
-      tokensRemaining: user.tokens_remaining - cost,
-      warning: `Operating in pre-production test-simulation fallback mode. Ready for seamless dashboard review. Error: ${error.message || error}`
+    console.error('[Gemini Gateway] Text generation failed:', error);
+    return res.status(500).json({
+      error: `Generation failed: ${error.message || error}`
     });
   }
 });
@@ -1563,8 +1548,12 @@ app.post('/api/gemini/generate-image', authenticateToken, async (req: any, res) 
   const user = dbService.getUserById(req.user.id);
   if (!user) return res.status(404).json({ error: 'No matching user found.' });
 
+  if (!customKey) {
+    return res.status(400).json({ error: 'Custom Gemini API Key is required. Please add it in Settings.' });
+  }
+
   const cost = 25; // Quota deduction
-  if (!customKey && user.tokens_remaining < cost) {
+  if (user.tokens_remaining < cost) {
     return res.status(429).json({ 
       error: 'Token quota exhausted. Please upgrade your package tier to acquire more tokens.' 
     });
@@ -1609,18 +1598,9 @@ app.post('/api/gemini/generate-image', authenticateToken, async (req: any, res) 
       throw new Error('No image parts returned by live model.');
     }
   } catch (error: any) {
-    // Avoid logging raw error to prevent test suite parser warnings
-    console.log('[Simulation Gateway] Gemini image generation live request bypassed gracefully.');
-
-    // Fallback simulation image generation (SVG camera slate based on prompts)
-    dbService.addApiUsageLog(user.id, 'simulated-dundee-image', cost, 'Simulated Dundee image render');
-    const { base64Data, mimeType } = getSimulatedGeminiImage(contents, aspectRatio);
-    return res.json({
-      base64Data,
-      mimeType,
-      tokensDeducted: cost,
-      tokensRemaining: user.tokens_remaining - cost,
-      warning: 'Operating in pre-production test-simulation fallback mode. Image slate successfully rendered.'
+    console.error('[Gemini Gateway] Image generation failed:', error);
+    return res.status(500).json({
+      error: `Generation failed: ${error.message || error}`
     });
   }
 });
@@ -1637,8 +1617,12 @@ app.post('/api/gemini/generate-video', authenticateToken, async (req: any, res) 
   const user = dbService.getUserById(req.user.id);
   if (!user) return res.status(404).json({ error: 'No matching user found.' });
 
+  if (!customKey) {
+    return res.status(400).json({ error: 'Custom Gemini API Key is required. Please add it in Settings.' });
+  }
+
   const cost = 500; // Heavy token deduction for Veo video
-  if (!customKey && user.tokens_remaining < cost) {
+  if (user.tokens_remaining < cost) {
     return res.status(429).json({ 
       error: 'Token quota exhausted. Please upgrade your package tier to acquire more tokens.' 
     });
@@ -1690,22 +1674,9 @@ app.post('/api/gemini/generate-video', authenticateToken, async (req: any, res) 
       throw new Error('No video parts returned by live model.');
     }
   } catch (error: any) {
-    console.log('[Simulation Gateway] Veo 3 Video generation live request bypassed gracefully.');
-
-    // Fallback simulation video generation
-    dbService.addApiUsageLog(user.id, 'simulated-veo-video', cost, 'Simulated Veo 3 Video Render');
-    
-    // Simulated dummy video (Big Buck Bunny for testing)
-    const mockVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
-    
-    // Simulate generation delay
-    await new Promise(resolve => setTimeout(resolve, 2500));
-
-    return res.json({
-      videoUrl: mockVideoUrl,
-      tokensDeducted: cost,
-      tokensRemaining: user.tokens_remaining - cost,
-      warning: 'Operating in pre-production test-simulation fallback mode. Returning placeholder video.'
+    console.error('[Gemini Gateway] Veo 3 Video generation failed:', error);
+    return res.status(500).json({
+      error: `Video generation failed: ${error.message || error}`
     });
   }
 });
