@@ -548,7 +548,6 @@ export default function StoryboardTab({
                                       </div>
                                     </div>
                                   )}
-                                  )}
                                 </div>
 
                                 {/* Veo Video Generation Panel */}
