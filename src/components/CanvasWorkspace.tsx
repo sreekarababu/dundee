@@ -17,7 +17,7 @@ import ColorPickerPopover from './ColorPickerPopover';
 import SizeOpacitySliders from './SizeOpacitySliders';
 import { motion, AnimatePresence } from 'motion/react';
 import { saasApi } from '../lib/authSupport';
-import APIHealthMonitor from './APIHealthMonitor';
+
 
 interface CanvasWorkspaceProps {
   project: DrawingProject;
@@ -695,7 +695,7 @@ export default function CanvasWorkspace({
 
   return (
     <div className="flex-1 relative flex overflow-hidden select-none" id="drawing-workspace-container">
-      <APIHealthMonitor componentName="Drawing Workspace" onDismiss={() => {}} />
+
       
       {/* LEFT SIDEBAR: Brush Palette Dock */}
       <div 

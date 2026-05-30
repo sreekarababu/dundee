@@ -13,7 +13,7 @@ import CastLocationsTab from './CastLocationsTab';
 import StoryboardTab from './StoryboardTab';
 import InpaintingEditor from './InpaintingEditor';
 import SettingsTab from './SettingsTab';
-import APIHealthMonitor from '../APIHealthMonitor';
+
 
 import { 
   CINEMATIC_TONES, COLOR_PALETTES, TIME_OF_DAY, 
@@ -1293,7 +1293,7 @@ Output a clean JSON matching the schema.`,
 
   return (
     <div className="min-h-screen pb-8 bg-black text-zinc-100 flex flex-col antialiased font-sans transition-colors selection:bg-emerald-500 selection:text-black">
-      <APIHealthMonitor componentName="Storyboard Workspace" onDismiss={() => {}} />
+
       
       {/* Dynamic Header */}
       <header className="sticky top-0 z-40 bg-zinc-950/85 backdrop-blur-md border-b border-zinc-800/80 px-6 py-4 flex items-center justify-between shadow-md">
