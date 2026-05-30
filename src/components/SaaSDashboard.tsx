@@ -966,6 +966,7 @@ export default function SaaSDashboard({
                           <th className="p-4">Tiers Billing</th>
                           <th className="p-4">Tokens Remaining</th>
                           <th className="p-4">Access Status</th>
+                          <th className="p-4">Joined Date</th>
                           <th className="p-4 text-right pr-6">Administrative Action</th>
                         </tr>
                       </thead>
@@ -998,6 +999,11 @@ export default function SaaSDashboard({
                               }`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${u.account_status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
                                 {u.account_status}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <span className="text-[10px] text-gray-500 font-mono font-bold whitespace-nowrap">
+                                {new Date(u.created_at).toLocaleDateString()}
                               </span>
                             </td>
                             <td className="p-4 text-right pr-6 space-x-1.5">
